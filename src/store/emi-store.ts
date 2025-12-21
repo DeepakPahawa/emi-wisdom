@@ -18,7 +18,7 @@ interface EmiStore {
     // Actions
     setLoanDetails: (details: LoanDetails) => void;
     updatePaidEmi: (month: number, amount: number) => void;
-    updateEmiHack: (month: number, amount: number) => void;
+    updatePartPayment: (month: number, amount: number) => void;
     recalculate: () => void;
 }
 
@@ -36,8 +36,8 @@ const calculateSummary = (schedule: AmortizationPoint[], originalTenure: number)
             totalPaidToPrincipal += point.principalComponent;
         }
 
-        if (point.emiHack !== undefined && point.emiHack > 0) {
-            totalSavingsFromHacks += point.emiHack;
+        if (point.partPayment !== undefined && point.partPayment > 0) {
+            totalSavingsFromHacks += point.partPayment;
         }
 
         // Get the last outstanding balance
@@ -122,7 +122,7 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         });
     },
 
-    updateEmiHack: (month: number, amount: number) => {
+    updatePartPayment: (month: number, amount: number) => {
         const { schedule, loanDetails } = get();
 
         // Find the index of the month
@@ -133,24 +133,24 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         const updatedSchedule = [...schedule];
         updatedSchedule[monthIndex] = {
             ...updatedSchedule[monthIndex],
-            emiHack: amount,
+            partPayment: amount,
         };
 
         // Recalculate the schedule from this point forward with the extra payment
         const extraPayments = updatedSchedule
-            .filter(p => p.emiHack && p.emiHack > 0)
-            .map(p => ({ month: p.month, amount: p.emiHack || 0 }));
+            .filter(p => p.partPayment && p.partPayment > 0)
+            .map(p => ({ month: p.month, amount: p.partPayment || 0 }));
 
         const newResult = CalculationService.calculateAmortizationSchedule(
             loanDetails,
             extraPayments
         );
 
-        // Preserve user inputs (paidEmi and emiHack)
+        // Preserve user inputs (paidEmi and partPayment)
         const finalSchedule = newResult.schedule.map((point, index) => ({
             ...point,
             paidEmi: updatedSchedule[index]?.paidEmi,
-            emiHack: updatedSchedule[index]?.emiHack,
+            partPayment: updatedSchedule[index]?.partPayment,
         }));
 
         set({
@@ -168,8 +168,8 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
 
         // Extract extra payments from current schedule
         const extraPayments = currentSchedule
-            .filter(p => p.emiHack && p.emiHack > 0)
-            .map(p => ({ month: p.month, amount: p.emiHack || 0 }));
+            .filter(p => p.partPayment && p.partPayment > 0)
+            .map(p => ({ month: p.month, amount: p.partPayment || 0 }));
 
         const result = CalculationService.calculateAmortizationSchedule(
             loanDetails,
@@ -180,7 +180,7 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         const newSchedule = result.schedule.map((point, index) => ({
             ...point,
             paidEmi: currentSchedule[index]?.paidEmi,
-            emiHack: currentSchedule[index]?.emiHack,
+            partPayment: currentSchedule[index]?.partPayment,
         }));
 
         set({

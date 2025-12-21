@@ -91,11 +91,11 @@ export function LoanSummary() {
                         )}
                     </div>
 
-                    {/* Savings from EMI Hacks */}
+                    {/* Savings from Part Payments */}
                     <div className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 backdrop-blur-sm rounded-lg border border-blue-500/20">
                         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm mb-1">
                             <PiggyBank className="w-4 h-4" />
-                            <span>EMI Hacks Total</span>
+                            <span>Part Payment Total</span>
                         </div>
                         <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                             {formatCurrency(summary.totalSavingsFromHacks)}
@@ -145,7 +145,7 @@ export function LoanSummary() {
                 </Card>
             )}
 
-            {/* Suggestion for EMI Hacks */}
+            {/* Suggestion for Part Payments */}
             {summary.numberOfPaidEmis === 0 && (
                 <Card className="w-full bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
                     <CardContent className="p-4">
@@ -155,7 +155,7 @@ export function LoanSummary() {
                             </div>
                             <div>
                                 <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                                    Pro Tip: EMI Hacks 💡
+                                    Pro Tip: Part Payments 💡
                                 </h4>
                                 <p className="text-sm text-muted-foreground">
                                     Try adding just <span className="font-bold text-foreground">₹10,000</span> extra to your principal in the first few months.

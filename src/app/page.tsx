@@ -33,7 +33,7 @@ export default function Home() {
               <MonitorPlay className="w-6 h-6 text-primary-foreground" />
             </div>
             <h1 className="text-3xl font-bold text-foreground">
-              EMI Wisdom
+              EMI Hacks
             </h1>
           </div>
           <ModeToggle />

@@ -18,10 +18,10 @@ import { useLoanDetailsStore } from '@/store/loan-details-store';
 import { useEmiTransactionsStore } from '@/store/emi-transactions-store';
 
 export function AmortizationTable() {
-    const { schedule, calculationResult, updatePaidEmi, updateEmiHack } = useEmiStore();
+    const { schedule, calculationResult, updatePaidEmi, updatePartPayment } = useEmiStore();
     const { currentLoan } = useLoanDetailsStore();
     const { transactions, fetchTransactionsByLoanId } = useEmiTransactionsStore();
-    const [editingCell, setEditingCell] = useState<{ month: number; field: 'paidEmi' | 'emiHack' } | null>(null);
+    const [editingCell, setEditingCell] = useState<{ month: number; field: 'paidEmi' | 'partPayment' } | null>(null);
     const { toast } = useToast();
 
     // Fetch transactions when currentLoan changes
@@ -38,13 +38,13 @@ export function AmortizationTable() {
                 if (transaction.transaction_type === 'emi') {
                     updatePaidEmi(transaction.month_number, transaction.amount_paid);
                 } else if (transaction.transaction_type === 'part_payment') {
-                    updateEmiHack(transaction.month_number, transaction.amount_paid);
+                    updatePartPayment(transaction.month_number, transaction.amount_paid);
                 }
             });
         }
-    }, [transactions, updatePaidEmi, updateEmiHack]);
+    }, [transactions, updatePaidEmi, updatePartPayment]);
 
-    const handleCellClick = (month: number, field: 'paidEmi' | 'emiHack') => {
+    const handleCellClick = (month: number, field: 'paidEmi' | 'partPayment') => {
         setEditingCell({ month, field });
     };
 
@@ -65,14 +65,14 @@ export function AmortizationTable() {
                 return null;
             }
 
-            // For EMI Hacks (part_payment): entire amount goes to principal, 0 to interest
+            // For Part Payment (part_payment): entire amount goes to principal, 0 to interest
             // For Paid EMI (emi): use the scheduled principal/interest breakdown
             const principalComponent = transactionType === 'part_payment'
-                ? amount  // EMI Hacks: 100% principal
+                ? amount  // Part Payment: 100% principal
                 : point.principalComponent;  // Paid EMI: use schedule
 
             const interestComponent = transactionType === 'part_payment'
-                ? 0  // EMI Hacks: no interest
+                ? 0  // Part Payment: no interest
                 : point.interestComponent;  // Paid EMI: use schedule
 
             const transactionData: CreateEmiTransactionRequest = {
@@ -176,7 +176,7 @@ export function AmortizationTable() {
         }
     };
 
-    const handleInputChange = (month: number, field: 'paidEmi' | 'emiHack', value: string) => {
+    const handleInputChange = (month: number, field: 'paidEmi' | 'partPayment', value: string) => {
         const numValue = parseFloat(value) || 0;
 
         // Find the schedule point for this month
@@ -193,13 +193,13 @@ export function AmortizationTable() {
                 deleteEmiTransaction(month, 'emi');
             }
         } else {
-            updateEmiHack(month, numValue);
+            updatePartPayment(month, numValue);
 
             if (point && numValue > 0) {
                 // Save to database as 'part_payment' type
                 saveEmiTransaction(month, numValue, point, 'part_payment');
             } else if (numValue === 0) {
-                // Delete from database if value is 0 (EMI Hack removed)
+                // Delete from database if value is 0 (Part Payment removed)
                 deleteEmiTransaction(month, 'part_payment');
             }
         }
@@ -239,7 +239,7 @@ export function AmortizationTable() {
                                 <TableHead className="font-semibold text-primary w-24 bg-card">Date</TableHead>
                                 <TableHead className="font-semibold text-primary text-right bg-card w-32">Scheduled EMI</TableHead>
                                 <TableHead className="font-semibold text-primary text-right bg-card w-28">Paid EMI</TableHead>
-                                <TableHead className="font-semibold text-primary text-right bg-card w-28">EMI Hacks</TableHead>
+                                <TableHead className="font-semibold text-primary text-right bg-card w-28">Part Payment</TableHead>
                                 <TableHead className="font-semibold text-primary text-right bg-card w-32">Principal</TableHead>
                                 <TableHead className="font-semibold text-primary text-right bg-card w-32">Interest</TableHead>
                                 <TableHead className="font-semibold text-primary text-right bg-card w-32">Balance</TableHead>
@@ -248,7 +248,7 @@ export function AmortizationTable() {
                         <TableBody>
                             {schedule.map((point) => {
                                 const isPrincipalGreater = point.principalComponent > point.interestComponent;
-                                const hasEmiHack = point.emiHack && point.emiHack > 0;
+                                const hasPartPayment = point.partPayment && point.partPayment > 0;
 
                                 return (
                                     <TableRow
@@ -256,7 +256,7 @@ export function AmortizationTable() {
                                         className={`
                       transition-colors hover:bg-muted/50
                       ${isPrincipalGreater ? 'bg-emerald-500/5 border-l-4 border-l-emerald-500' : ''}
-                      ${hasEmiHack ? 'bg-blue-500/5 border-r-4 border-r-blue-500' : ''}
+                      ${hasPartPayment ? 'bg-blue-500/5 border-r-4 border-r-blue-500' : ''}
                     `}
                                     >
                                         <TableCell className="font-medium text-foreground">
@@ -297,22 +297,22 @@ export function AmortizationTable() {
                                             )}
                                         </TableCell>
 
-                                        {/* EMI Hacks - Editable */}
+                                        {/* Part Payment - Editable */}
                                         <TableCell
                                             className="text-right cursor-pointer hover:bg-accent/20 transition-colors"
-                                            onClick={() => handleCellClick(point.month, 'emiHack')}
+                                            onClick={() => handleCellClick(point.month, 'partPayment')}
                                         >
-                                            {editingCell?.month === point.month && editingCell?.field === 'emiHack' ? (
+                                            {editingCell?.month === point.month && editingCell?.field === 'partPayment' ? (
                                                 <Input
                                                     type="number"
-                                                    defaultValue={point.emiHack || ''}
+                                                    defaultValue={point.partPayment || ''}
                                                     onBlur={(e) => {
-                                                        handleInputChange(point.month, 'emiHack', e.target.value);
+                                                        handleInputChange(point.month, 'partPayment', e.target.value);
                                                         handleInputBlur();
                                                     }}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
-                                                            handleInputChange(point.month, 'emiHack', e.currentTarget.value);
+                                                            handleInputChange(point.month, 'partPayment', e.currentTarget.value);
                                                             handleInputBlur();
                                                         }
                                                     }}
@@ -321,8 +321,8 @@ export function AmortizationTable() {
                                                     placeholder="Extra amount"
                                                 />
                                             ) : (
-                                                <span className={`${hasEmiHack ? 'text-blue-500 font-semibold' : 'text-foreground'}`}>
-                                                    {point.emiHack ? formatCurrency(point.emiHack) : '-'}
+                                                <span className={`${hasPartPayment ? 'text-blue-500 font-semibold' : 'text-foreground'}`}>
+                                                    {point.partPayment ? formatCurrency(point.partPayment) : '-'}
                                                 </span>
                                             )}
                                         </TableCell>
@@ -363,7 +363,7 @@ export function AmortizationTable() {
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-blue-600 dark:text-blue-400 text-sm w-28">
                                     {formatCurrency(
-                                        schedule.reduce((sum, point) => sum + (point.emiHack || 0), 0)
+                                        schedule.reduce((sum, point) => sum + (point.partPayment || 0), 0)
                                     )}
                                 </TableCell>
                                 <TableCell className="text-right font-semibold text-green-600 dark:text-green-400 text-sm w-32">

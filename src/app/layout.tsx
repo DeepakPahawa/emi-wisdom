@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EMI Wisdom - Smart EMI Calculator",
+  title: "EMI Hacks - Smart EMI Calculator",
   description: "Track and optimize your loan EMI payments with smart insights",
 };
 

@@ -26,7 +26,7 @@ export interface AmortizationPoint {
     totalPayment: number;
     outstandingBalance: number;
     paidEmi?: number; // User-entered actual EMI paid
-    emiHack?: number; // User-entered extra principal payment
+    partPayment?: number; // User-entered extra principal payment
 }
 
 export interface CalculationResult {
