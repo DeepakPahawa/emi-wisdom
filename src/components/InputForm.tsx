@@ -9,10 +9,25 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
+import { Pencil } from "lucide-react"
 import { useEmiStore } from "@/store/emi-store"
 import { useLoanDetailsStore } from "@/store/loan-details-store"
 import { useToast } from "@/hooks/use-toast"
 import { LoanLabel } from "@/types"
+
+// Helper function to format loan label for display
+const formatLoanLabel = (label: LoanLabel): string => {
+    const labelMap: Record<LoanLabel, string> = {
+        'BusinessLoan': 'Business Loan',
+        'CarLoan': 'Car Loan',
+        'EducationLoan': 'Education Loan',
+        'GoldLoan': 'Gold Loan',
+        'HomeLoan': 'Home Loan',
+        'Other': 'Other',
+        'PersonalLoan': 'Personal Loan'
+    };
+    return labelMap[label];
+};
 
 export function InputForm() {
     const { loanDetails, setLoanDetails } = useEmiStore();
@@ -34,7 +49,8 @@ export function InputForm() {
     // New fields for loan details
     const [bankName, setBankName] = useState<string>("")
     const [loanLabel, setLoanLabel] = useState<LoanLabel>("HomeLoan")
-    const [loanNumber, setLoanNumber] = useState<string>("")
+    const [loanLabelText, setLoanLabelText] = useState<string>("")
+    const [isEditMode, setIsEditMode] = useState<boolean>(false)
 
     // Fetch loan details on mount using the store
     useEffect(() => {
@@ -46,7 +62,7 @@ export function InputForm() {
         if (currentLoan) {
             setBankName(currentLoan.bank_name);
             setLoanLabel(currentLoan.loan_label);
-            setLoanNumber(currentLoan.loan_number);
+            setLoanLabelText(currentLoan.loan_number);
             setAmount(currentLoan.principal_amount);
             setRate(currentLoan.current_interest_rate);
             setYears(currentLoan.loan_tenure_months / 12);
@@ -110,8 +126,8 @@ export function InputForm() {
         });
 
         // If we have loan metadata (from secondary card), also update the database
-        if (currentLoan || (bankName.trim() || loanNumber.trim())) {
-            const finalLoanNumber = loanNumber.trim() || currentLoan?.loan_number || `LOAN-${Date.now()}`;
+        if (currentLoan || (bankName.trim() || loanLabelText.trim())) {
+            const finalLoanNumber = loanLabelText.trim() || currentLoan?.loan_number || `LOAN-${Date.now()}`;
 
             await saveLoanDetails({
                 loan_number: finalLoanNumber,
@@ -125,8 +141,8 @@ export function InputForm() {
             });
 
             // Update loan number if it was auto-generated
-            if (!loanNumber.trim() && !currentLoan?.loan_number) {
-                setLoanNumber(finalLoanNumber);
+            if (!loanLabelText.trim() && !currentLoan?.loan_number) {
+                setLoanLabelText(finalLoanNumber);
             }
         }
 
@@ -160,7 +176,7 @@ export function InputForm() {
         }
 
         // Generate a default loan number if not provided
-        const finalLoanNumber = loanNumber.trim() || `LOAN-${Date.now()}`;
+        const finalLoanNumber = loanLabelText.trim() || `LOAN-${Date.now()}`;
 
         // Use the store action to save loan details
         const success = await saveLoanDetails({
@@ -175,13 +191,14 @@ export function InputForm() {
         });
 
         if (success) {
+            setIsEditMode(false);
             toast({
                 title: currentLoan ? "Updated!" : "Saved!",
                 description: currentLoan ? "Loan details updated successfully" : "Loan details created successfully",
             });
             // Update loan number if it was auto-generated
-            if (!loanNumber.trim()) {
-                setLoanNumber(finalLoanNumber);
+            if (!loanLabelText.trim()) {
+                setLoanLabelText(finalLoanNumber);
             }
         } else {
             toast({
@@ -203,13 +220,13 @@ export function InputForm() {
 
                     {/* Principal Amount */}
                     <div className="space-y-4">
-                        <div className="flex flex-col gap-2">
-                            <Label className="text-muted-foreground text-sm">Principal Amount</Label>
+                        <div className="flex items-center justify-between gap-4">
+                            <Label className="text-muted-foreground text-sm whitespace-nowrap">Principal Amount</Label>
                             <Input
                                 type="number"
                                 value={amount}
                                 onChange={handleAmountChange}
-                                className="text-2xl font-semibold text-foreground bg-transparent border-border h-12 placeholder:text-muted-foreground/50"
+                                className="w-48 text-xl font-semibold text-foreground text-right bg-transparent border-border h-10 placeholder:text-muted-foreground/50"
                                 placeholder="Enter Amount"
                             />
                         </div>
@@ -229,14 +246,14 @@ export function InputForm() {
 
                     {/* Interest Rate */}
                     <div className="space-y-4">
-                        <div className="flex flex-col gap-2">
-                            <Label className="text-muted-foreground text-sm">Interest Rate (%)</Label>
+                        <div className="flex items-center justify-between gap-4">
+                            <Label className="text-muted-foreground text-sm whitespace-nowrap">Interest Rate (%)</Label>
                             <Input
                                 type="number"
                                 value={rate}
                                 onChange={handleRateChange}
                                 step="0.01"
-                                className="text-2xl font-semibold text-foreground bg-transparent border-border h-12 placeholder:text-muted-foreground/50"
+                                className="w-24 text-xl font-semibold text-foreground text-right bg-transparent border-border h-10 placeholder:text-muted-foreground/50"
                                 placeholder="Rate"
                             />
                         </div>
@@ -252,16 +269,6 @@ export function InputForm() {
                             <span>1%</span>
                             <span>20%</span>
                         </div>
-                    </div>
-
-                    {/* EMI Start Date */}
-                    <div className="space-y-4">
-                        <Label className="text-muted-foreground text-sm">EMI Start Date</Label>
-                        <DatePicker
-                            date={startDate}
-                            onDateChange={(date) => date && setStartDate(date)}
-                            placeholder="Select EMI start date"
-                        />
                     </div>
 
                     {/* Tenure */}
@@ -301,62 +308,130 @@ export function InputForm() {
             {/* Secondary Card - Optional Loan Details */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
                 <CardHeader>
-                    <CardTitle className="text-lg font-light text-muted-foreground uppercase tracking-widest">
-                        Loan Details <span className="text-xs normal-case">(Optional)</span>
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-light text-muted-foreground uppercase tracking-widest">
+                            Loan Details <span className="text-xs normal-case">(Optional)</span>
+                        </CardTitle>
+                        <button
+                            onClick={() => setIsEditMode(!isEditMode)}
+                            className="p-2 hover:bg-muted rounded-md transition-colors"
+                            disabled={storeLoading}
+                        >
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
 
-                    {/* Loan Type */}
-                    <div className="space-y-2">
-                        <Label className="text-muted-foreground text-sm">Loan Type</Label>
-                        <Select value={loanLabel} onValueChange={(value) => setLoanLabel(value as LoanLabel)} disabled={storeLoading}>
-                            <SelectTrigger className="text-lg font-medium text-foreground bg-transparent border-border h-11">
-                                <SelectValue placeholder="Select loan type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="HomeLoan">Home Loan</SelectItem>
-                                <SelectItem value="PersonalLoan">Personal Loan</SelectItem>
-                                <SelectItem value="CarLoan">Car Loan</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {isEditMode ? (
+                        <>
+                            {/* Edit Mode - Show Input Fields */}
 
-                    {/* Bank Name */}
-                    <div className="space-y-2">
-                        <Label className="text-muted-foreground text-sm">Bank Name</Label>
-                        <Input
-                            type="text"
-                            value={bankName}
-                            onChange={(e) => setBankName(e.target.value)}
-                            className="text-lg font-medium text-foreground bg-transparent border-border h-11 placeholder:text-muted-foreground/50"
-                            placeholder="e.g., HDFC Bank, SBI, ICICI"
-                            disabled={storeLoading}
-                        />
-                    </div>
+                            {/* Loan Type */}
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground text-sm">Loan Type</Label>
+                                <Select value={loanLabel} onValueChange={(value) => setLoanLabel(value as LoanLabel)} disabled={storeLoading}>
+                                    <SelectTrigger className="text-lg font-medium text-foreground bg-transparent border-border h-11">
+                                        <SelectValue placeholder="Select loan type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="BusinessLoan">Business Loan</SelectItem>
+                                        <SelectItem value="CarLoan">Car Loan</SelectItem>
+                                        <SelectItem value="EducationLoan">Education Loan</SelectItem>
+                                        <SelectItem value="GoldLoan">Gold Loan</SelectItem>
+                                        <SelectItem value="HomeLoan">Home Loan</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                        <SelectItem value="PersonalLoan">Personal Loan</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                    {/* Loan Number */}
-                    <div className="space-y-2">
-                        <Label className="text-muted-foreground text-sm">Loan Number</Label>
-                        <Input
-                            type="text"
-                            value={loanNumber}
-                            onChange={(e) => setLoanNumber(e.target.value)}
-                            className="text-lg font-medium text-foreground bg-transparent border-border h-11 placeholder:text-muted-foreground/50"
-                            placeholder="e.g., HL123456789 (auto-generated if empty)"
-                            disabled={storeLoading}
-                        />
-                    </div>
+                            {/* Bank Name */}
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground text-sm">Bank Name</Label>
+                                <Input
+                                    type="text"
+                                    value={bankName}
+                                    onChange={(e) => setBankName(e.target.value)}
+                                    className="text-lg font-medium text-foreground bg-transparent border-border h-11 placeholder:text-muted-foreground/50"
+                                    placeholder="e.g., HDFC Bank, SBI, ICICI"
+                                    disabled={storeLoading}
+                                />
+                            </div>
 
-                    {/* Apply Button - Secondary */}
-                    <Button
-                        onClick={handleApplySecondary}
-                        disabled={storeSaving || storeLoading}
-                        className="w-full h-12 text-base font-semibold bg-secondary hover:bg-secondary/90 text-secondary-foreground transition-all duration-200"
-                    >
-                        {storeSaving ? "Saving..." : "Save to Database"}
-                    </Button>
+                            {/* Label */}
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground text-sm">Label</Label>
+                                <Input
+                                    type="text"
+                                    value={loanLabelText}
+                                    onChange={(e) => setLoanLabelText(e.target.value)}
+                                    className="text-lg font-medium text-foreground bg-transparent border-border h-11 placeholder:text-muted-foreground/50"
+                                    placeholder="e.g., My Home Loan"
+                                    disabled={storeLoading}
+                                />
+                            </div>
+
+                            {/* EMI Start Date */}
+                            <div className="space-y-2">
+                                <Label className="text-muted-foreground text-sm">EMI Start Date</Label>
+                                <DatePicker
+                                    date={startDate}
+                                    onDateChange={(date) => date && setStartDate(date)}
+                                    placeholder="Select EMI start date"
+                                />
+                            </div>
+
+                            {/* Save Button */}
+                            <Button
+                                onClick={handleApplySecondary}
+                                disabled={storeSaving || storeLoading}
+                                className="w-full h-12 text-base font-semibold bg-secondary hover:bg-secondary/90 text-secondary-foreground transition-all duration-200"
+                            >
+                                {storeSaving ? "Saving..." : "Save Info"}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            {/* Display Mode - Show as Labels */}
+
+                            {/* Loan Type */}
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs">Loan Type</Label>
+                                <div className="text-lg font-medium text-foreground">
+                                    {formatLoanLabel(loanLabel)}
+                                </div>
+                            </div>
+
+                            {/* Bank Name */}
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs">Bank Name</Label>
+                                <div className="text-lg font-medium text-foreground">
+                                    {bankName || 'Not Specified'}
+                                </div>
+                            </div>
+
+                            {/* Label */}
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs">Label</Label>
+                                <div className="text-lg font-medium text-foreground">
+                                    {loanLabelText || 'Not Specified'}
+                                </div>
+                            </div>
+
+                            {/* EMI Start Date */}
+                            <div className="space-y-1">
+                                <Label className="text-muted-foreground text-xs">EMI Start Date</Label>
+                                <div className="text-lg font-medium text-foreground">
+                                    {startDate ? new Intl.DateTimeFormat('en-IN', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric'
+                                    }).format(startDate) : 'Not Set'}
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                 </CardContent>
             </Card>

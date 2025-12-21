@@ -72,7 +72,7 @@ export interface CreateEmiTransactionRequest {
 }
 
 // Loan Details types for database
-export type LoanLabel = 'HomeLoan' | 'PersonalLoan' | 'CarLoan' | 'Other';
+export type LoanLabel = 'BusinessLoan' | 'CarLoan' | 'EducationLoan' | 'GoldLoan' | 'HomeLoan' | 'Other' | 'PersonalLoan';
 
 export interface LoanDetailsDB {
     id?: string;

@@ -53,11 +53,12 @@ const calculateSummary = (schedule: AmortizationPoint[], originalTenure: number)
     const remainingMonths = actualRemainingMonths > 0 ? actualRemainingMonths : 0;
     const remainingYears = Math.floor(remainingMonths / 12);
 
-    // Calculate projected completion date
+    // Calculate projected completion date from the last EMI in the schedule
     let projectedCompletionDate: Date | null = null;
-    if (numberOfPaidEmis > 0 && remainingMonths > 0) {
-        projectedCompletionDate = new Date();
-        projectedCompletionDate.setMonth(projectedCompletionDate.getMonth() + remainingMonths);
+    if (schedule.length > 0) {
+        // Get the date of the last EMI in the schedule
+        const lastEmi = schedule[schedule.length - 1];
+        projectedCompletionDate = new Date(lastEmi.date);
     }
 
     return {

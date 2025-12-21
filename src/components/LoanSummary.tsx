@@ -2,7 +2,7 @@
 
 import { useEmiStore } from '@/store/emi-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Calendar, Wallet, PiggyBank, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, Wallet, PiggyBank, Target, Clock } from 'lucide-react';
 
 export function LoanSummary() {
     const { summary, calculationResult, loanDetails } = useEmiStore();
@@ -18,6 +18,7 @@ export function LoanSummary() {
     const formatDate = (date: Date | null) => {
         if (!date) return 'N/A';
         return new Intl.DateTimeFormat('en-IN', {
+            day: '2-digit',
             month: 'short',
             year: 'numeric',
         }).format(date);
@@ -28,90 +29,142 @@ export function LoanSummary() {
         ? originalTenureMonths - (summary.numberOfPaidEmis + summary.remainingMonths)
         : 0;
 
+    const progressPercentage = originalTenureMonths > 0
+        ? (summary.numberOfPaidEmis / originalTenureMonths) * 100
+        : 0;
+
     return (
-        <div className="space-y-4">
-            <Card className="w-full bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 shadow-lg">
+        <div className="space-y-6">
+            <Card className="w-full bg-card/80 backdrop-blur-md border-border shadow-xl">
                 <CardHeader>
                     <CardTitle className="text-xl font-light text-primary uppercase tracking-widest flex items-center gap-2">
                         <Target className="w-5 h-5" />
                         Loan Summary
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <CardContent className="space-y-6">
 
-                    {/* Number of Paid EMIs */}
-                    <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Paid EMIs</span>
-                        </div>
-                        <div className="text-2xl font-bold text-foreground">
-                            {summary.numberOfPaidEmis}
-                            <span className="text-sm font-normal text-muted-foreground ml-2">
-                                / {originalTenureMonths}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Total Paid to Interest */}
-                    <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                            <TrendingDown className="w-4 h-4 text-red-500" />
-                            <span>Paid to Interest</span>
-                        </div>
-                        <div className="text-2xl font-bold text-foreground">
-                            {formatCurrency(summary.totalPaidToInterest)}
-                        </div>
-                    </div>
-
-                    {/* Total Paid to Principal */}
-                    <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                            <TrendingUp className="w-4 h-4 text-green-500" />
-                            <span>Paid to Principal</span>
-                        </div>
-                        <div className="text-2xl font-bold text-foreground">
-                            {formatCurrency(summary.totalPaidToPrincipal)}
-                        </div>
-                    </div>
-
-                    {/* Remaining Tenure */}
-                    <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Remaining Tenure</span>
-                        </div>
-                        <div className="text-2xl font-bold text-foreground">
-                            {summary.remainingYears}y {summary.remainingMonths % 12}m
-                        </div>
-                        {savedMonths > 0 && (
-                            <div className="text-xs text-green-500 mt-1">
-                                Saved {Math.floor(savedMonths / 12)}y {savedMonths % 12}m
+                    {/* Progress Section */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm font-medium text-muted-foreground">EMI Progress</span>
                             </div>
-                        )}
+                            <div className="text-right">
+                                <div className="text-2xl font-bold text-foreground">
+                                    {summary.numberOfPaidEmis}
+                                    <span className="text-base font-normal text-muted-foreground"> / {originalTenureMonths}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                    {progressPercentage.toFixed(1)}% Complete
+                                </div>
+                            </div>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500"
+                                style={{ width: `${progressPercentage}%` }}
+                            />
+                        </div>
                     </div>
 
-                    {/* Savings from Part Payments */}
-                    <div className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 backdrop-blur-sm rounded-lg border border-blue-500/20">
-                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm mb-1">
-                            <PiggyBank className="w-4 h-4" />
-                            <span>Part Payment Total</span>
+                    {/* Payment Breakdown - Two Column Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        {/* Paid to Principal */}
+                        <div className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-lg border border-green-500/20">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                    <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Principal</span>
+                                </div>
+                            </div>
+                            <div className="text-2xl font-bold text-foreground">
+                                {formatCurrency(summary.totalPaidToPrincipal)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Paid towards loan amount
+                            </div>
                         </div>
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {formatCurrency(summary.totalSavingsFromHacks)}
+
+                        {/* Paid to Interest */}
+                        <div className="p-4 bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-lg border border-red-500/20">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                    <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Interest</span>
+                                </div>
+                            </div>
+                            <div className="text-2xl font-bold text-foreground">
+                                {formatCurrency(summary.totalPaidToInterest)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Paid as interest cost
+                            </div>
                         </div>
+
                     </div>
 
-                    {/* Projected Completion */}
-                    <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
-                        <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                            <Wallet className="w-4 h-4" />
-                            <span>Completion Date</span>
+                    {/* Remaining & Completion Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        {/* Remaining Tenure */}
+                        <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Remaining</span>
+                            </div>
+                            <div className="text-2xl font-bold text-foreground">
+                                {summary.remainingYears}y {summary.remainingMonths % 12}m
+                            </div>
+                            {savedMonths > 0 && (
+                                <div className="text-xs text-green-600 dark:text-green-400 mt-1 font-medium">
+                                    ✓ Saved {Math.floor(savedMonths / 12)}y {savedMonths % 12}m
+                                </div>
+                            )}
                         </div>
-                        <div className="text-2xl font-bold text-foreground">
-                            {formatDate(summary.projectedCompletionDate)}
+
+                        {/* Projected Completion */}
+                        <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Wallet className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Completion</span>
+                            </div>
+                            <div className="text-2xl font-bold text-foreground">
+                                {formatDate(summary.projectedCompletionDate)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Expected payoff date
+                            </div>
                         </div>
+
                     </div>
+
+                    {/* Part Payment Total - Full Width Highlight */}
+                    {summary.totalSavingsFromHacks > 0 && (
+                        <div className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-lg border border-blue-500/20">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                                        <PiggyBank className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
+                                            Total Part Payments
+                                        </div>
+                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                            {formatCurrency(summary.totalSavingsFromHacks)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs text-muted-foreground">Extra principal paid</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                 </CardContent>
             </Card>
