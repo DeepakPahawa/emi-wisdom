@@ -5,7 +5,8 @@ import { SavingsService } from '../src/services/SavingsService';
 const details = {
     principal: 5000000, // 50 Lakhs
     rate: 9, // 9%
-    durationMonths: 240 // 20 years
+    durationMonths: 240, // 20 years
+    startDate: new Date() // EMI start date
 };
 
 console.log("--- Standard Loan ---");

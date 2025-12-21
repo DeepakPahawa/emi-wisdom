@@ -24,7 +24,7 @@ export class CalculationService {
         extraPayments: ExtraPayment[] = [],
         rateChanges: RateChange[] = []
     ): CalculationResult {
-        let { principal, rate, durationMonths } = details;
+        let { principal, rate, durationMonths, startDate } = details;
         let balance = principal;
         const schedule: AmortizationPoint[] = [];
 
@@ -89,9 +89,14 @@ export class CalculationService {
                 crossingPointMonth = month;
             }
 
+            // Calculate the date for this EMI payment
+            const emiDate = new Date(startDate);
+            emiDate.setMonth(emiDate.getMonth() + (month - 1));
+
             schedule.push({
                 month,
                 year: Math.ceil(month / 12),
+                date: emiDate,
                 principalComponent: principalForMonth + extraPay,
                 interestComponent: interestForMonth,
                 totalPayment: totalMonthlyPay,

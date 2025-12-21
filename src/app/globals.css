@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@plugin "tailwindcss-animate";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -48,8 +50,10 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0 0);
+  /* Light Gray/White */
   --foreground: oklch(0.145 0 0);
+  /* Dark Gray/Black */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -77,8 +81,29 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Custom Card Backgrounds */
+  --card-blue: oklch(0.97 0.02 250 / 0.5);
+  /* Blue 50 */
+  --card-red: oklch(0.97 0.02 29 / 0.5);
+  /* Red 50 */
+  --card-emerald: oklch(0.97 0.02 140 / 0.5);
+  /* Emerald 50 */
+
+  /* Chart elements */
+  --chart-axis: oklch(0.37 0 0);
+  /* Gray 600 */
+  --chart-grid: oklch(0.87 0 0);
+  /* Gray 200 */
+  --chart-tooltip-bg: oklch(1 0 0);
+  --chart-tooltip-text: oklch(0.145 0 0);
+
+  /* Semantic Text Colors */
+  --text-blue: oklch(0.446 0.149 257.417);
+  /* blue-600 */
+  --text-red: oklch(0.577 0.245 27.325);
+  /* red-600 */
+  --text-emerald: oklch(0.511 0.162 143.255);
+  /* emerald-600 */
 }
 
 .dark {
@@ -113,15 +138,49 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Custom Card Backgrounds Dark */
+  --card-blue: oklch(0.2 0.05 250 / 0.2);
+  /* Deep Blue */
+  --card-red: oklch(0.2 0.05 29 / 0.2);
+  /* Deep Red */
+  --card-emerald: oklch(0.2 0.05 140 / 0.2);
+  /* Deep Emerald */
+
+  /* Chart elements Dark */
+  --chart-axis: oklch(0.708 0 0);
+  /* Gray 400 */
+  --chart-grid: oklch(0.269 0 0);
+  /* Gray 800 */
+  --chart-tooltip-bg: oklch(0.205 0 0);
+  --chart-tooltip-text: oklch(0.985 0 0);
+
+  /* Semantic Text Colors Dark */
+  --text-blue: oklch(0.809 0.105 251.813);
+  /* blue-300 */
+  --text-red: oklch(0.837 0.128 26.696);
+  /* red-300 */
+  --text-emerald: oklch(0.844 0.122 153.308);
+  /* emerald-300 */
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
+    /* Use variables for dynamic background */
+  }
+
+  /* Add specific overrides if needed */
+  .dark body {
     background: radial-gradient(circle at top left, #1e1b4b, #0f172a, #000000);
-    min-height: 100vh;
+  }
+
+  /* Light mode simplified or nice gradient */
+  :root body {
+    background: radial-gradient(circle at top left, #f3f4f6, #e5e7eb, #d1d5db);
   }
 }

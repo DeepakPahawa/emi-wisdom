@@ -11,12 +11,10 @@ interface ChartProps {
 }
 
 export function AmortizationChart({ data, crossingPoint }: ChartProps) {
-    // Downsample for performance if needed, but <360 points is fine for modern browsers.
-
     return (
-        <Card className="w-full bg-white/5 backdrop-blur-md border-white/10 text-white shadow-xl">
+        <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
             <CardHeader>
-                <CardTitle className="text-xl font-light text-blue-200 uppercase tracking-widest">
+                <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
                     Principal vs Interest
                 </CardTitle>
             </CardHeader>
@@ -33,18 +31,32 @@ export function AmortizationChart({ data, crossingPoint }: ChartProps) {
                                 <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.1} />
                             </linearGradient>
                         </defs>
-                        <XAxis dataKey="year" stroke="#9ca3af" minTickGap={30} />
-                        <YAxis stroke="#9ca3af" tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`} />
+                        <XAxis
+                            dataKey="year"
+                            stroke="var(--chart-axis)"
+                            minTickGap={30}
+                            style={{ fontSize: '12px' }}
+                        />
+                        <YAxis
+                            stroke="var(--chart-axis)"
+                            tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                            style={{ fontSize: '12px' }}
+                        />
                         <Tooltip
-                            contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff', borderRadius: '8px' }}
-                            itemStyle={{ color: '#fff' }}
+                            contentStyle={{
+                                backgroundColor: 'var(--chart-tooltip-bg)',
+                                borderColor: 'var(--border)',
+                                color: 'var(--chart-tooltip-text)',
+                                borderRadius: '8px'
+                            }}
+                            itemStyle={{ color: 'var(--chart-tooltip-text)' }}
                             formatter={(value: number | string | unknown) => {
                                 if (typeof value === 'number') return `₹ ${Math.round(value).toLocaleString()}`;
                                 return value as string;
                             }}
                             labelFormatter={(label) => `Year ${label}`}
                         />
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" opacity={0.5} />
 
                         <Area
                             type="monotone"
