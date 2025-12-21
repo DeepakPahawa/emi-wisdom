@@ -4,6 +4,7 @@
 import { InputForm } from "@/components/InputForm"
 import { LoanSummary } from "@/components/LoanSummary"
 import { AmortizationTable } from "@/components/AmortizationTable"
+import { PAvsInterestCharts } from "@/components/PAvsInterestCharts"
 import { useEmiStore } from "@/store/emi-store"
 import { useEffect } from "react"
 import { MonitorPlay } from "lucide-react"
@@ -39,12 +40,12 @@ export default function Home() {
           <ModeToggle />
         </header>
 
-        {/* First Row: Input Form and Amortization Table side by side */}
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Left Column: Input Form (4 cols) */}
-          <div className="lg:col-span-4">
+          {/* Left Column: Input Form + Loan Summary (4 cols) */}
+          <div className="lg:col-span-4 space-y-6">
             <InputForm />
+            <LoanSummary />
           </div>
 
           {/* Right Column: Amortization Table (8 cols) - Height matches InputForm */}
@@ -54,9 +55,9 @@ export default function Home() {
 
         </div>
 
-        {/* Second Row: Loan Summary (full width) */}
+        {/* Charts Section - Full Width */}
         <div className="w-full max-w-7xl">
-          <LoanSummary />
+          <PAvsInterestCharts />
         </div>
       </main>
     </ThemeProvider>

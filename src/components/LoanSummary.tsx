@@ -145,20 +145,6 @@ export function LoanSummary() {
                     {/* Original Completion & Tenure Comparison */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                        {/* Original Completion Date */}
-                        <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original Completion</span>
-                            </div>
-                            <div className="text-xl font-bold text-foreground whitespace-nowrap">
-                                {formatDate(summary.originalCompletionDate)}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                                Based on original tenure
-                            </div>
-                        </div>
-
                         {/* Actual vs Original Months */}
                         <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
                             <div className="flex items-center gap-2 mb-2">
@@ -175,6 +161,20 @@ export function LoanSummary() {
                                         ({originalTenureMonths - summary.actualTotalMonths} saved)
                                     </span>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* Original Completion Date */}
+                        <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original Completion</span>
+                            </div>
+                            <div className="text-xl font-bold text-foreground whitespace-nowrap">
+                                {formatDate(summary.originalCompletionDate)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Based on original tenure
                             </div>
                         </div>
 
