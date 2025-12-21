@@ -10,11 +10,20 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
 import { useEmiStore } from "@/store/emi-store"
+import { useLoanDetailsStore } from "@/store/loan-details-store"
 import { useToast } from "@/hooks/use-toast"
 import { LoanLabel } from "@/types"
 
 export function InputForm() {
     const { loanDetails, setLoanDetails } = useEmiStore();
+    const {
+        currentLoan,
+        isLoading: storeLoading,
+        isSaving: storeSaving,
+        fetchLoanDetails,
+        saveLoanDetails,
+        setCurrentLoan
+    } = useLoanDetailsStore();
     const { toast } = useToast();
 
     const [amount, setAmount] = useState<number | string>(loanDetails.principal)
@@ -26,37 +35,25 @@ export function InputForm() {
     const [bankName, setBankName] = useState<string>("")
     const [loanLabel, setLoanLabel] = useState<LoanLabel>("HomeLoan")
     const [loanNumber, setLoanNumber] = useState<string>("")
-    const [isLoading, setIsLoading] = useState(false)
-    const [isSaving, setIsSaving] = useState(false)
 
-    // Fetch loan details on mount
+    // Fetch loan details on mount using the store
     useEffect(() => {
-        const fetchLoanDetails = async () => {
-            setIsLoading(true);
-            try {
-                const response = await fetch('/api/loan-details');
-                const result = await response.json();
-
-                if (response.ok && result.data && result.data.length > 0) {
-                    // Load the most recent loan (first in the array since we order by created_at desc)
-                    const loan = result.data[0];
-                    setBankName(loan.bank_name);
-                    setLoanLabel(loan.loan_label);
-                    setLoanNumber(loan.loan_number);
-                    setAmount(loan.principal_amount);
-                    setRate(loan.current_interest_rate);
-                    setYears(loan.loan_tenure_months / 12);
-                    setStartDate(new Date(loan.emi_start_date));
-                }
-            } catch (error) {
-                console.error('Error fetching loan details:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchLoanDetails();
-    }, []);
+    }, [fetchLoanDetails]);
+
+    // Update form fields when currentLoan changes in the store
+    useEffect(() => {
+        if (currentLoan) {
+            setBankName(currentLoan.bank_name);
+            setLoanLabel(currentLoan.loan_label);
+            setLoanNumber(currentLoan.loan_number);
+            setAmount(currentLoan.principal_amount);
+            setRate(currentLoan.current_interest_rate);
+            setYears(currentLoan.loan_tenure_months / 12);
+            setStartDate(new Date(currentLoan.emi_start_date));
+        }
+    }, [currentLoan]);
+
 
     useEffect(() => {
         const principal = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
@@ -104,13 +101,34 @@ export function InputForm() {
             return;
         }
 
-        // Just update the loan details in the store for primary card
+        // Update the loan details in the EMI calculation store
         setLoanDetails({
             principal,
             rate: interestRate,
             durationMonths: years * 12,
             startDate: startDate
         });
+
+        // If we have loan metadata (from secondary card), also update the database
+        if (currentLoan || (bankName.trim() || loanNumber.trim())) {
+            const finalLoanNumber = loanNumber.trim() || currentLoan?.loan_number || `LOAN-${Date.now()}`;
+
+            await saveLoanDetails({
+                loan_number: finalLoanNumber,
+                principal_amount: principal,
+                original_interest_rate: currentLoan?.original_interest_rate || interestRate,
+                current_interest_rate: interestRate,
+                emi_start_date: startDate.toISOString().split('T')[0],
+                loan_tenure_months: years * 12,
+                bank_name: bankName.trim() || currentLoan?.bank_name || 'Not Specified',
+                loan_label: loanLabel,
+            });
+
+            // Update loan number if it was auto-generated
+            if (!loanNumber.trim() && !currentLoan?.loan_number) {
+                setLoanNumber(finalLoanNumber);
+            }
+        }
 
         toast({
             title: "Applied!",
@@ -144,53 +162,33 @@ export function InputForm() {
         // Generate a default loan number if not provided
         const finalLoanNumber = loanNumber.trim() || `LOAN-${Date.now()}`;
 
-        setIsSaving(true);
+        // Use the store action to save loan details
+        const success = await saveLoanDetails({
+            loan_number: finalLoanNumber,
+            principal_amount: principal,
+            original_interest_rate: interestRate,
+            current_interest_rate: interestRate,
+            emi_start_date: startDate.toISOString().split('T')[0],
+            loan_tenure_months: years * 12,
+            bank_name: bankName.trim() || 'Not Specified',
+            loan_label: loanLabel,
+        });
 
-        try {
-            const response = await fetch('/api/loan-details', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    loan_number: finalLoanNumber,
-                    principal_amount: principal,
-                    original_interest_rate: interestRate,
-                    current_interest_rate: interestRate,
-                    emi_start_date: startDate.toISOString().split('T')[0],
-                    loan_tenure_months: years * 12,
-                    bank_name: bankName.trim() || 'Not Specified',
-                    loan_label: loanLabel,
-                }),
+        if (success) {
+            toast({
+                title: currentLoan ? "Updated!" : "Saved!",
+                description: currentLoan ? "Loan details updated successfully" : "Loan details created successfully",
             });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                toast({
-                    title: result.isUpdate ? "Updated!" : "Saved!",
-                    description: result.message,
-                });
-                // Update loan number if it was auto-generated
-                if (!loanNumber.trim()) {
-                    setLoanNumber(finalLoanNumber);
-                }
-            } else {
-                toast({
-                    title: "Error",
-                    description: result.error || "Failed to save loan details",
-                    variant: "destructive"
-                });
+            // Update loan number if it was auto-generated
+            if (!loanNumber.trim()) {
+                setLoanNumber(finalLoanNumber);
             }
-        } catch (error) {
-            console.error('Error saving loan details:', error);
+        } else {
             toast({
                 title: "Error",
                 description: "Failed to save loan details. Please try again.",
                 variant: "destructive"
             });
-        } finally {
-            setIsSaving(false);
         }
     };
 
@@ -291,7 +289,7 @@ export function InputForm() {
                     {/* Apply Button - Primary */}
                     <Button
                         onClick={handleApplyPrimary}
-                        disabled={isLoading}
+                        disabled={storeLoading}
                         className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-200"
                     >
                         Apply
@@ -312,7 +310,7 @@ export function InputForm() {
                     {/* Loan Type */}
                     <div className="space-y-2">
                         <Label className="text-muted-foreground text-sm">Loan Type</Label>
-                        <Select value={loanLabel} onValueChange={(value) => setLoanLabel(value as LoanLabel)} disabled={isLoading}>
+                        <Select value={loanLabel} onValueChange={(value) => setLoanLabel(value as LoanLabel)} disabled={storeLoading}>
                             <SelectTrigger className="text-lg font-medium text-foreground bg-transparent border-border h-11">
                                 <SelectValue placeholder="Select loan type" />
                             </SelectTrigger>
@@ -334,7 +332,7 @@ export function InputForm() {
                             onChange={(e) => setBankName(e.target.value)}
                             className="text-lg font-medium text-foreground bg-transparent border-border h-11 placeholder:text-muted-foreground/50"
                             placeholder="e.g., HDFC Bank, SBI, ICICI"
-                            disabled={isLoading}
+                            disabled={storeLoading}
                         />
                     </div>
 
@@ -347,17 +345,17 @@ export function InputForm() {
                             onChange={(e) => setLoanNumber(e.target.value)}
                             className="text-lg font-medium text-foreground bg-transparent border-border h-11 placeholder:text-muted-foreground/50"
                             placeholder="e.g., HL123456789 (auto-generated if empty)"
-                            disabled={isLoading}
+                            disabled={storeLoading}
                         />
                     </div>
 
                     {/* Apply Button - Secondary */}
                     <Button
                         onClick={handleApplySecondary}
-                        disabled={isSaving || isLoading}
+                        disabled={storeSaving || storeLoading}
                         className="w-full h-12 text-base font-semibold bg-secondary hover:bg-secondary/90 text-secondary-foreground transition-all duration-200"
                     >
-                        {isSaving ? "Saving..." : "Save to Database"}
+                        {storeSaving ? "Saving..." : "Save to Database"}
                     </Button>
 
                 </CardContent>

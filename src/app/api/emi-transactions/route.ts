@@ -7,9 +7,9 @@ export async function POST(request: NextRequest) {
         const body: CreateEmiTransactionRequest = await request.json();
 
         // Validate required fields
-        if (!body.emi_date || !body.month_number || !body.transaction_type || body.amount_paid === undefined) {
+        if (!body.loan_id || !body.emi_date || !body.month_number || !body.transaction_type || body.amount_paid === undefined) {
             return NextResponse.json(
-                { error: 'Missing required fields' },
+                { error: 'Missing required fields: loan_id, emi_date, month_number, transaction_type, and amount_paid are required' },
                 { status: 400 }
             );
         }
@@ -30,11 +30,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if transaction already exists for this month AND transaction type
+        // Check if transaction already exists for this loan, month AND transaction type
         // This allows separate rows for 'emi' and 'part_payment' in the same month
         const { data: existingTransaction } = await supabase
             .from('emi_transactions')
             .select('id')
+            .eq('loan_id', body.loan_id)
             .eq('month_number', body.month_number)
             .eq('transaction_type', body.transaction_type)
             .maybeSingle();
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
             const updateResult = await supabase
                 .from('emi_transactions')
                 .update({
+                    loan_id: body.loan_id,
                     emi_date: body.emi_date,
                     amount_paid: body.amount_paid,
                     principal_component: body.principal_component,
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
                 .from('emi_transactions')
                 .insert([
                     {
+                        loan_id: body.loan_id,
                         emi_date: body.emi_date,
                         month_number: body.month_number,
                         transaction_type: body.transaction_type,

@@ -62,6 +62,7 @@ export interface EmiTransaction {
 }
 
 export interface CreateEmiTransactionRequest {
+    loan_id: string; // Required: ID of the loan this transaction belongs to
     emi_date: string;
     month_number: number;
     transaction_type: 'emi' | 'part_payment';
