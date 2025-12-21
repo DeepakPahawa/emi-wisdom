@@ -39,19 +39,24 @@ export default function Home() {
           <ModeToggle />
         </header>
 
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* First Row: Input Form and Amortization Table side by side */}
+        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
           {/* Left Column: Input Form (4 cols) */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="lg:col-span-4">
             <InputForm />
-            <LoanSummary />
           </div>
 
-          {/* Right Column: Amortization Table (8 cols) */}
-          <div className="lg:col-span-8">
+          {/* Right Column: Amortization Table (8 cols) - Height matches InputForm */}
+          <div className="lg:col-span-8 self-stretch">
             <AmortizationTable />
           </div>
 
+        </div>
+
+        {/* Second Row: Loan Summary (full width) */}
+        <div className="w-full max-w-7xl">
+          <LoanSummary />
         </div>
       </main>
     </ThemeProvider>

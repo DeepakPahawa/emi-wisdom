@@ -210,7 +210,7 @@ export function InputForm() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" id="input-form-container">
             {/* Primary Card - Essential Loan Parameters */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
                 <CardHeader>

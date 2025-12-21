@@ -22,7 +22,7 @@ interface EmiStore {
     recalculate: () => void;
 }
 
-const calculateSummary = (schedule: AmortizationPoint[], originalTenure: number): LoanSummary => {
+const calculateSummary = (schedule: AmortizationPoint[], loanDetails: LoanDetails): LoanSummary => {
     let numberOfPaidEmis = 0;
     let totalPaidToInterest = 0;
     let totalPaidToPrincipal = 0;
@@ -61,6 +61,16 @@ const calculateSummary = (schedule: AmortizationPoint[], originalTenure: number)
         projectedCompletionDate = new Date(lastEmi.date);
     }
 
+    // Calculate original completion date (based on original tenure from start date)
+    let originalCompletionDate: Date | null = null;
+    if (loanDetails.startDate) {
+        originalCompletionDate = new Date(loanDetails.startDate);
+        originalCompletionDate.setMonth(originalCompletionDate.getMonth() + loanDetails.durationMonths);
+    }
+
+    // Actual total months is the length of the schedule (can be less than original due to part payments)
+    const actualTotalMonths = schedule.length;
+
     return {
         numberOfPaidEmis,
         totalPaidToInterest,
@@ -69,6 +79,8 @@ const calculateSummary = (schedule: AmortizationPoint[], originalTenure: number)
         remainingYears,
         totalSavingsFromHacks,
         projectedCompletionDate,
+        originalCompletionDate,
+        actualTotalMonths,
     };
 };
 
@@ -98,6 +110,8 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         remainingYears: 0,
         totalSavingsFromHacks: 0,
         projectedCompletionDate: null,
+        originalCompletionDate: null,
+        actualTotalMonths: 0,
     },
 
     setLoanDetails: (details: LoanDetails) => {
@@ -114,7 +128,7 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         );
 
         // Recalculate summary
-        const summary = calculateSummary(updatedSchedule, loanDetails.durationMonths);
+        const summary = calculateSummary(updatedSchedule, loanDetails);
 
         // Batch the state update
         set({
@@ -160,7 +174,7 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         });
 
         // Recalculate summary
-        const summary = calculateSummary(finalSchedule, loanDetails.durationMonths);
+        const summary = calculateSummary(finalSchedule, loanDetails);
         set({ summary });
     },
 
@@ -190,7 +204,7 @@ export const useEmiStore = create<EmiStore>((set, get) => ({
         });
 
         // Calculate summary
-        const summary = calculateSummary(newSchedule, loanDetails.durationMonths);
+        const summary = calculateSummary(newSchedule, loanDetails);
         set({ summary });
     },
 }));

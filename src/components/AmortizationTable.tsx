@@ -22,7 +22,31 @@ export function AmortizationTable() {
     const { currentLoan } = useLoanDetailsStore();
     const { transactions, fetchTransactionsByLoanId } = useEmiTransactionsStore();
     const [editingCell, setEditingCell] = useState<{ month: number; field: 'paidEmi' | 'partPayment' } | null>(null);
+    const [maxHeight, setMaxHeight] = useState<string>('auto');
     const { toast } = useToast();
+
+    // Calculate max-height based on InputForm container
+    useEffect(() => {
+        const calculateHeight = () => {
+            const inputFormContainer = document.getElementById('input-form-container');
+            if (inputFormContainer) {
+                const height = inputFormContainer.offsetHeight;
+                setMaxHeight(`${height}px`);
+            }
+        };
+
+        // Calculate on mount and when window resizes
+        calculateHeight();
+        window.addEventListener('resize', calculateHeight);
+
+        // Also recalculate after a short delay to ensure DOM is fully rendered
+        const timer = setTimeout(calculateHeight, 100);
+
+        return () => {
+            window.removeEventListener('resize', calculateHeight);
+            clearTimeout(timer);
+        };
+    }, []);
 
     // Fetch transactions when currentLoan changes
     useEffect(() => {
@@ -225,14 +249,14 @@ export function AmortizationTable() {
     };
 
     return (
-        <Card className="w-full bg-card/80 backdrop-blur-md border-border shadow-xl">
-            <CardHeader>
+        <Card className="w-full flex flex-col bg-card/80 backdrop-blur-md border-border shadow-xl" style={{ maxHeight }}>
+            <CardHeader className="flex-shrink-0">
                 <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
                     Amortization Schedule
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-                <div className="relative" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <CardContent className="p-0 flex-1 flex flex-col overflow-hidden min-h-0">
+                <div className="flex-1 overflow-y-auto min-h-0">
                     <Table>
                         <TableHeader className="sticky top-0 bg-card backdrop-blur-md z-10 border-b-2 border-border shadow-sm">
                             <TableRow>
@@ -346,7 +370,7 @@ export function AmortizationTable() {
                 </div>
 
                 {/* Totals Row - Using Table structure for perfect alignment */}
-                <div className="border-t-2 border-border bg-muted/30">
+                <div className="border-t-2 border-border bg-muted/30 flex-shrink-0">
                     <Table>
                         <TableBody>
                             <TableRow className="hover:bg-transparent">

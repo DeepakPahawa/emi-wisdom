@@ -45,6 +45,8 @@ export interface LoanSummary {
     remainingYears: number;
     totalSavingsFromHacks: number;
     projectedCompletionDate: Date | null;
+    originalCompletionDate: Date | null; // Completion date based on original tenure
+    actualTotalMonths: number; // Actual total months (can be less due to part payments)
 }
 
 // EMI Transaction types for database

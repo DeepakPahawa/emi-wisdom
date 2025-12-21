@@ -52,9 +52,9 @@ export function LoanSummary() {
                                 <span className="text-sm font-medium text-muted-foreground">EMI Progress</span>
                             </div>
                             <div className="text-right">
-                                <div className="text-2xl font-bold text-foreground">
+                                <div className="text-xl font-bold text-foreground whitespace-nowrap">
                                     {summary.numberOfPaidEmis}
-                                    <span className="text-base font-normal text-muted-foreground"> / {originalTenureMonths}</span>
+                                    <span className="text-sm font-normal text-muted-foreground"> / {originalTenureMonths}</span>
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                     {progressPercentage.toFixed(1)}% Complete
@@ -81,7 +81,7 @@ export function LoanSummary() {
                                     <span className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Principal</span>
                                 </div>
                             </div>
-                            <div className="text-2xl font-bold text-foreground">
+                            <div className="text-xl font-bold text-foreground break-words">
                                 {formatCurrency(summary.totalPaidToPrincipal)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
@@ -97,7 +97,7 @@ export function LoanSummary() {
                                     <span className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">Interest</span>
                                 </div>
                             </div>
-                            <div className="text-2xl font-bold text-foreground">
+                            <div className="text-xl font-bold text-foreground break-words">
                                 {formatCurrency(summary.totalPaidToInterest)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
@@ -116,7 +116,7 @@ export function LoanSummary() {
                                 <Clock className="w-4 h-4 text-muted-foreground" />
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Remaining</span>
                             </div>
-                            <div className="text-2xl font-bold text-foreground">
+                            <div className="text-xl font-bold text-foreground whitespace-nowrap">
                                 {summary.remainingYears}y {summary.remainingMonths % 12}m
                             </div>
                             {savedMonths > 0 && (
@@ -132,11 +132,49 @@ export function LoanSummary() {
                                 <Wallet className="w-4 h-4 text-muted-foreground" />
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Completion</span>
                             </div>
-                            <div className="text-2xl font-bold text-foreground">
+                            <div className="text-xl font-bold text-foreground whitespace-nowrap">
                                 {formatDate(summary.projectedCompletionDate)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                                 Expected payoff date
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Original Completion & Tenure Comparison */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        {/* Original Completion Date */}
+                        <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Original Completion</span>
+                            </div>
+                            <div className="text-xl font-bold text-foreground whitespace-nowrap">
+                                {formatDate(summary.originalCompletionDate)}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Based on original tenure
+                            </div>
+                        </div>
+
+                        {/* Actual vs Original Months */}
+                        <div className="p-4 bg-card/60 backdrop-blur-sm rounded-lg border border-border">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tenure</span>
+                            </div>
+                            <div className="text-xl font-bold text-foreground whitespace-nowrap">
+                                {summary.actualTotalMonths} / {originalTenureMonths}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                                Actual / Original months
+                                {summary.actualTotalMonths < originalTenureMonths && (
+                                    <span className="text-green-600 dark:text-green-400 font-medium ml-1">
+                                        ({originalTenureMonths - summary.actualTotalMonths} saved)
+                                    </span>
+                                )}
                             </div>
                         </div>
 
@@ -154,7 +192,7 @@ export function LoanSummary() {
                                         <div className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">
                                             Total Part Payments
                                         </div>
-                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                        <div className="text-xl font-bold text-blue-600 dark:text-blue-400 break-words">
                                             {formatCurrency(summary.totalSavingsFromHacks)}
                                         </div>
                                     </div>
