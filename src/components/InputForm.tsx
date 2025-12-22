@@ -9,12 +9,14 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { Pencil } from "lucide-react"
+import { Pencil, RotateCcw, IndianRupee, CirclePercent, Calendar } from "lucide-react"
 import { useEmiStore } from "@/store/emi-store"
 import { useLoanDetailsStore } from "@/store/loan-details-store"
 import { useToast } from "@/hooks/use-toast"
 import { LoanLabel } from "@/types"
 import { LoanSummary } from "@/components/LoanSummary"
+import { useAuth } from "@/contexts/AuthContext"
+import { LoginDialog } from "@/components/LoginDialog"
 
 // Helper function to format loan label for display
 const formatLoanLabel = (label: LoanLabel): string => {
@@ -41,6 +43,7 @@ export function InputForm() {
         setCurrentLoan
     } = useLoanDetailsStore();
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const [amount, setAmount] = useState<number | string>(loanDetails.principal)
     const [rate, setRate] = useState<number | string>(loanDetails.rate)
@@ -52,6 +55,7 @@ export function InputForm() {
     const [loanLabel, setLoanLabel] = useState<LoanLabel>("HomeLoan")
     const [loanLabelText, setLoanLabelText] = useState<string>("")
     const [isEditMode, setIsEditMode] = useState<boolean>(false)
+    const [showLoginDialog, setShowLoginDialog] = useState<boolean>(false)
 
     // Fetch loan details on mount using the store
     useEffect(() => {
@@ -95,8 +99,81 @@ export function InputForm() {
         setRate(val === '' ? '' : val);
     }
 
+    const handleYearsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        const numVal = val === '' ? 1 : Number(val);
+        // Ensure years is between 1 and 30
+        if (numVal >= 1 && numVal <= 30) {
+            setYears(numVal);
+        }
+    }
+
+    const handleReset = async () => {
+        try {
+            // Fetch the latest loan details from the database
+            await fetchLoanDetails();
+
+            // If we have a loan in the database, use those values
+            if (currentLoan) {
+                setAmount(currentLoan.principal_amount);
+                setRate(currentLoan.current_interest_rate);
+                setYears(currentLoan.loan_tenure_months / 12);
+                setStartDate(new Date(currentLoan.emi_start_date));
+                setBankName(currentLoan.bank_name);
+                setLoanLabel(currentLoan.loan_label);
+                setLoanLabelText(currentLoan.loan_number);
+
+                // Update the EMI calculation store
+                setLoanDetails({
+                    principal: currentLoan.principal_amount,
+                    rate: currentLoan.current_interest_rate,
+                    durationMonths: currentLoan.loan_tenure_months,
+                    startDate: new Date(currentLoan.emi_start_date),
+                });
+
+                toast({
+                    title: "✅ Reset Complete",
+                    description: "Loan details reloaded from database",
+                });
+            } else {
+                // If no loan exists in database, use default values
+                const defaultValues = {
+                    principal: 5000000,
+                    rate: 9,
+                    durationMonths: 240,
+                    startDate: new Date(),
+                };
+
+                setAmount(defaultValues.principal);
+                setRate(defaultValues.rate);
+                setYears(defaultValues.durationMonths / 12);
+                setStartDate(defaultValues.startDate);
+
+                setLoanDetails(defaultValues);
+
+                toast({
+                    title: "ℹ️ Reset to Defaults",
+                    description: "No saved loan found. Using default values.",
+                });
+            }
+        } catch (error) {
+            console.error('Error resetting loan details:', error);
+            toast({
+                title: "❌ Error",
+                description: "Failed to reset loan details",
+                variant: "destructive",
+            });
+        }
+    };
+
 
     const handleApplyPrimary = async () => {
+        // Check if user is authenticated before saving
+        if (!user) {
+            setShowLoginDialog(true);
+            return;
+        }
+
         const principal = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const interestRate = typeof rate === 'string' ? parseFloat(rate) || 0 : rate;
 
@@ -154,6 +231,12 @@ export function InputForm() {
     };
 
     const handleApplySecondary = async () => {
+        // Check if user is authenticated before saving
+        if (!user) {
+            setShowLoginDialog(true);
+            return;
+        }
+
         // Secondary card fields are optional, so no strict validation
         const principal = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const interestRate = typeof rate === 'string' ? parseFloat(rate) || 0 : rate;
@@ -212,102 +295,167 @@ export function InputForm() {
 
     return (
         <div className="space-y-6" id="input-form-container">
-            {/* Primary Card - Essential Loan Parameters */}
-            <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
-                <CardHeader>
-                    <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">Loan Configuration</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-8">
+            {/* Loan Configuration + Loan Summary - Height reference for Amortization Table */}
+            <div id="loan-config-summary" className="space-y-6">
+                {/* Primary Card - Essential Loan Parameters */}
+                <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">Loan Configuration</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-8">
 
-                    {/* Principal Amount */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-4">
-                            <Label className="text-muted-foreground text-sm whitespace-nowrap">Principal Amount</Label>
-                            <Input
-                                type="number"
-                                value={amount}
-                                onChange={handleAmountChange}
-                                className="w-48 text-xl font-semibold text-foreground text-right bg-transparent border-border h-10 placeholder:text-muted-foreground/50"
-                                placeholder="Enter Amount"
-                            />
-                        </div>
-                        <Slider
-                            value={[typeof amount === 'number' ? amount : 0]}
-                            min={100000}
-                            max={20000000}
-                            step={50000}
-                            onValueChange={(v) => setAmount(v[0])}
-                            className="py-1"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>₹ 1L</span>
-                            <span>₹ 2Cr+</span>
-                        </div>
-                    </div>
-
-                    {/* Interest Rate */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between gap-4">
-                            <Label className="text-muted-foreground text-sm whitespace-nowrap">Interest Rate (%)</Label>
-                            <Input
-                                type="number"
-                                value={rate}
-                                onChange={handleRateChange}
-                                step="0.01"
-                                className="w-24 text-xl font-semibold text-foreground text-right bg-transparent border-border h-10 placeholder:text-muted-foreground/50"
-                                placeholder="Rate"
-                            />
-                        </div>
-                        <Slider
-                            value={[typeof rate === 'string' ? parseFloat(rate) || 0 : rate]}
-                            min={1}
-                            max={20}
-                            step={0.1}
-                            onValueChange={(v) => setRate(v[0])}
-                            className="py-1"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>1%</span>
-                            <span>20%</span>
-                        </div>
-                    </div>
-
-                    {/* Tenure */}
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-end">
-                            <Label className="text-muted-foreground text-sm">Loan Tenure</Label>
-                            <div className="text-2xl font-semibold text-foreground">
-                                {years} Years
+                        {/* Principal Amount */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <Label className="text-muted-foreground text-sm">Principal Amount</Label>
+                                <div className="relative w-48">
+                                    <div className="absolute left-0 top-0 bottom-0 w-10 bg-primary/10 rounded-l-md flex items-center justify-center border border-r-0 border-border">
+                                        <IndianRupee className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <Input
+                                        type="number"
+                                        value={amount}
+                                        onChange={handleAmountChange}
+                                        className="pl-12 pr-4 h-10 text-base font-semibold text-primary bg-primary/5 border-border rounded-md"
+                                        placeholder="Enter Amount"
+                                    />
+                                </div>
+                            </div>
+                            <div className="relative pt-6">
+                                <Slider
+                                    value={[typeof amount === 'number' ? amount : 0]}
+                                    min={100000}
+                                    max={100000000}
+                                    step={50000}
+                                    onValueChange={(v) => setAmount(v[0])}
+                                    className="py-1"
+                                />
+                                {/* Amount in words label */}
+                                <div
+                                    className="absolute -top-1 transform -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium whitespace-nowrap"
+                                    style={{
+                                        left: `${((typeof amount === 'number' ? amount : 0) - 100000) / (100000000 - 100000) * 100}%`
+                                    }}
+                                >
+                                    {(() => {
+                                        const amt = typeof amount === 'number' ? amount : 0;
+                                        if (amt >= 10000000) {
+                                            return `₹ ${(amt / 10000000).toFixed(2)} Cr`;
+                                        } else if (amt >= 100000) {
+                                            return `₹ ${(amt / 100000).toFixed(2)} L`;
+                                        } else {
+                                            return `₹ ${amt.toLocaleString('en-IN')}`;
+                                        }
+                                    })()}
+                                </div>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>₹ 1L</span>
+                                <span>₹ 10Cr</span>
                             </div>
                         </div>
-                        <Slider
-                            value={[years]}
-                            min={1}
-                            max={30}
-                            step={1}
-                            onValueChange={(v) => setYears(v[0])}
-                            className="py-1"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>1 Yr</span>
-                            <span>30 Yrs</span>
+
+                        {/* Interest Rate */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <Label className="text-muted-foreground text-sm">Interest Rate</Label>
+                                <div className="relative w-32">
+                                    <div className="absolute left-0 top-0 bottom-0 w-10 bg-primary/10 rounded-l-md flex items-center justify-center border border-r-0 border-border">
+                                        <CirclePercent className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <Input
+                                        type="number"
+                                        value={rate}
+                                        onChange={handleRateChange}
+                                        step="0.01"
+                                        className="pl-12 pr-10 h-10 text-base font-semibold text-primary bg-primary/5 border-border rounded-md"
+                                        placeholder="Rate"
+                                    />
+                                    <div className="absolute right-3 top-0 bottom-0 flex items-center">
+                                        <span className="text-sm font-medium text-primary">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <Slider
+                                value={[typeof rate === 'string' ? parseFloat(rate) || 0 : rate]}
+                                min={1}
+                                max={20}
+                                step={0.1}
+                                onValueChange={(v) => setRate(v[0])}
+                                className="py-1"
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>1%</span>
+                                <span>20%</span>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Apply Button - Primary */}
-                    <Button
-                        onClick={handleApplyPrimary}
-                        disabled={storeLoading}
-                        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-200"
-                    >
-                        Apply
-                    </Button>
+                        {/* Tenure */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <Label className="text-muted-foreground text-sm">Loan Tenure</Label>
+                                <div className="relative w-32">
+                                    <div className="absolute left-0 top-0 bottom-0 w-10 bg-primary/10 rounded-l-md flex items-center justify-center border border-r-0 border-border">
+                                        <Calendar className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <Input
+                                        type="number"
+                                        value={years}
+                                        onChange={handleYearsChange}
+                                        min={1}
+                                        max={30}
+                                        step={1}
+                                        className="pl-12 pr-10 h-10 text-base font-semibold text-primary bg-primary/5 border-border rounded-md"
+                                        placeholder="Years"
+                                    />
+                                    <div className="absolute right-3 top-0 bottom-0 flex items-center">
+                                        <span className="text-sm font-medium text-primary">Yr</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <Slider
+                                value={[years]}
+                                min={1}
+                                max={30}
+                                step={1}
+                                onValueChange={(v) => setYears(v[0])}
+                                className="py-1"
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>1 Yr</span>
+                                <span>30 Yrs</span>
+                            </div>
+                        </div>
 
-                </CardContent>
-            </Card>
+                        {/* Action Buttons - Primary */}
+                        <div className="flex gap-3">
+                            {/* Reset Button */}
+                            <Button
+                                onClick={handleReset}
+                                disabled={storeLoading}
+                                variant="outline"
+                                className="flex-1 h-12 text-base font-semibold transition-all duration-200"
+                            >
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Reset
+                            </Button>
 
-            {/* Loan Summary - Between Configuration and Details */}
-            <LoanSummary />
+                            {/* Save Details Button */}
+                            <Button
+                                onClick={handleApplyPrimary}
+                                disabled={storeLoading}
+                                className="flex-1 h-12 text-base font-semibold bg-primary hover:bg-primary/90 transition-all duration-200"
+                            >
+                                Save Details
+                            </Button>
+                        </div>
+
+                    </CardContent>
+                </Card>
+
+                {/* Loan Summary - Between Configuration and Details */}
+                <LoanSummary />
+            </div>
 
             {/* Secondary Card - Optional Loan Details */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
@@ -439,6 +587,9 @@ export function InputForm() {
 
                 </CardContent>
             </Card>
+
+            {/* Login Dialog */}
+            <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
         </div>
     )
 }

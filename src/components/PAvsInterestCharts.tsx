@@ -169,26 +169,30 @@ export function PAvsInterestCharts() {
             {/* Actual Plan Chart - Row 2 */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
                 <CardHeader>
-                    <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
-                        Actual Plan
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        {schedule.length} months
-                        {schedule.length < loanDetails.durationMonths && (
-                            <span className="text-green-600 dark:text-green-400 font-semibold ml-1">
-                                • Saved {loanDetails.durationMonths - schedule.length} months!
-                            </span>
-                        )}
-                        {actualCrossoverMonth !== -1 && (
-                            <span className="block text-amber-600 dark:text-amber-400 font-semibold mt-1">
-                                ⚡ Crossover at Month {actualCrossoverMonth + 1}
-                            </span>
-                        )}
-                    </p>
+                    <div className="flex items-start justify-between">
+                        <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
+                            Actual Plan
+                        </CardTitle>
+                        <div className="text-right">
+                            <p className="text-sm text-muted-foreground">
+                                {schedule.length} months
+                                {schedule.length < loanDetails.durationMonths && (
+                                    <span className="text-green-600 dark:text-green-400 font-semibold ml-1">
+                                        • Saved {loanDetails.durationMonths - schedule.length} months!
+                                    </span>
+                                )}
+                            </p>
+                            {actualCrossoverMonth !== -1 && (
+                                <p className="text-sm text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                                    ⚡ Crossover at Month {actualCrossoverMonth + 1}
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={actualPlanData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <AreaChart data={actualPlanData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="actualPrincipal" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
@@ -204,14 +208,18 @@ export function PAvsInterestCharts() {
                                 dataKey="month"
                                 stroke="var(--chart-axis)"
                                 style={{ fontSize: '12px' }}
-                                tickFormatter={(value) => {
+                                ticks={(() => {
                                     const lastMonth = schedule.length;
-                                    // Show every 60th month (5 years), plus the first and last month
-                                    if (value === 1 || value === lastMonth || value % 60 === 0) {
-                                        return `M${value}`;
+                                    const ticks = [1];
+                                    for (let i = 60; i < lastMonth; i += 60) {
+                                        ticks.push(i);
                                     }
-                                    return '';
-                                }}
+                                    if (!ticks.includes(lastMonth)) {
+                                        ticks.push(lastMonth);
+                                    }
+                                    return ticks;
+                                })()}
+                                tickFormatter={(value) => `M${value}`}
                             />
                             <YAxis
                                 stroke="var(--chart-axis)"
@@ -267,21 +275,25 @@ export function PAvsInterestCharts() {
             {/* Original Plan Chart - Row 3 */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
                 <CardHeader>
-                    <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
-                        Original Plan
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        {loanDetails.durationMonths} months • EMI: {formatCurrency(calculationResult.emi)}
-                        {originalCrossoverMonth !== -1 && (
-                            <span className="block text-amber-600 dark:text-amber-400 font-semibold mt-1">
-                                ⚡ Crossover at Month {originalCrossoverMonth + 1}
-                            </span>
-                        )}
-                    </p>
+                    <div className="flex items-start justify-between">
+                        <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
+                            Original Plan
+                        </CardTitle>
+                        <div className="text-right">
+                            <p className="text-sm text-muted-foreground">
+                                {loanDetails.durationMonths} months • EMI: {formatCurrency(calculationResult.emi)}
+                            </p>
+                            {originalCrossoverMonth !== -1 && (
+                                <p className="text-sm text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                                    ⚡ Crossover at Month {originalCrossoverMonth + 1}
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={originalPlanData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <AreaChart data={originalPlanData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="originalPrincipal" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
@@ -297,14 +309,18 @@ export function PAvsInterestCharts() {
                                 dataKey="month"
                                 stroke="var(--chart-axis)"
                                 style={{ fontSize: '12px' }}
-                                tickFormatter={(value) => {
+                                ticks={(() => {
                                     const lastMonth = loanDetails.durationMonths;
-                                    // Show every 60th month (5 years), plus the first and last month
-                                    if (value === 1 || value === lastMonth || value % 60 === 0) {
-                                        return `M${value}`;
+                                    const ticks = [1];
+                                    for (let i = 60; i < lastMonth; i += 60) {
+                                        ticks.push(i);
                                     }
-                                    return '';
-                                }}
+                                    if (!ticks.includes(lastMonth)) {
+                                        ticks.push(lastMonth);
+                                    }
+                                    return ticks;
+                                })()}
+                                tickFormatter={(value) => `M${value}`}
                             />
                             <YAxis
                                 stroke="var(--chart-axis)"

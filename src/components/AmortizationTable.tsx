@@ -30,12 +30,12 @@ export function AmortizationTable() {
     const [maxHeight, setMaxHeight] = useState<string>('auto');
     const { toast } = useToast();
 
-    // Calculate max-height based on InputForm container
+    // Calculate max-height based on Loan Configuration + Loan Summary
     useEffect(() => {
         const calculateHeight = () => {
-            const inputFormContainer = document.getElementById('input-form-container');
-            if (inputFormContainer) {
-                const height = inputFormContainer.offsetHeight;
+            const loanConfigSummary = document.getElementById('loan-config-summary');
+            if (loanConfigSummary) {
+                const height = loanConfigSummary.offsetHeight;
                 setMaxHeight(`${height}px`);
             }
         };
