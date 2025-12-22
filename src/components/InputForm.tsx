@@ -14,6 +14,7 @@ import { useEmiStore } from "@/store/emi-store"
 import { useLoanDetailsStore } from "@/store/loan-details-store"
 import { useToast } from "@/hooks/use-toast"
 import { LoanLabel } from "@/types"
+import { LoanSummary } from "@/components/LoanSummary"
 
 // Helper function to format loan label for display
 const formatLoanLabel = (label: LoanLabel): string => {
@@ -304,6 +305,9 @@ export function InputForm() {
 
                 </CardContent>
             </Card>
+
+            {/* Loan Summary - Between Configuration and Details */}
+            <LoanSummary />
 
             {/* Secondary Card - Optional Loan Details */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">

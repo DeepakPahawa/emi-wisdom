@@ -42,10 +42,9 @@ export default function Home() {
 
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* Left Column: Input Form + Loan Summary (4 cols) */}
+          {/* Left Column: Loan Configuration + Loan Summary + Loan Details (4 cols) */}
           <div className="lg:col-span-4 space-y-6">
             <InputForm />
-            <LoanSummary />
           </div>
 
           {/* Right Column: Amortization Table + Charts (8 cols) */}

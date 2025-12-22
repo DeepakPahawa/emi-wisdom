@@ -65,7 +65,9 @@ const calculateSummary = (schedule: AmortizationPoint[], loanDetails: LoanDetail
     let originalCompletionDate: Date | null = null;
     if (loanDetails.startDate) {
         originalCompletionDate = new Date(loanDetails.startDate);
-        originalCompletionDate.setMonth(originalCompletionDate.getMonth() + loanDetails.durationMonths);
+        // Add (durationMonths - 1) because the last EMI is in month N, not month N+1
+        // For example: Start Jan 2026, 240 months tenure → Last EMI is Dec 2045 (239 months after start)
+        originalCompletionDate.setMonth(originalCompletionDate.getMonth() + loanDetails.durationMonths - 1);
     }
 
     // Actual total months is the length of the schedule (can be less than original due to part payments)
