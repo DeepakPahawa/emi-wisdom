@@ -165,94 +165,8 @@ export function PAvsInterestCharts() {
     };
 
     return (
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Original Plan Chart */}
-            <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
-                <CardHeader>
-                    <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
-                        Original Plan
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        {loanDetails.durationMonths} months • EMI: {formatCurrency(calculationResult.emi)}
-                        {originalCrossoverMonth !== -1 && (
-                            <span className="block text-amber-600 dark:text-amber-400 font-semibold mt-1">
-                                ⚡ Crossover at Month {originalCrossoverMonth + 1}
-                            </span>
-                        )}
-                    </p>
-                </CardHeader>
-                <CardContent className="h-[400px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={originalPlanData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="originalPrincipal" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
-                                </linearGradient>
-                                <linearGradient id="originalInterest" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.1} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" opacity={0.5} />
-                            <XAxis
-                                dataKey="month"
-                                stroke="var(--chart-axis)"
-                                style={{ fontSize: '12px' }}
-                                tickFormatter={(value) => value % 24 === 0 ? `M${value}` : ''}
-                            />
-                            <YAxis
-                                stroke="var(--chart-axis)"
-                                tickFormatter={formatCurrency}
-                                style={{ fontSize: '12px' }}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend
-                                wrapperStyle={{ fontSize: '14px' }}
-                                iconType="circle"
-                            />
-
-                            {/* Crossover Reference Line */}
-                            {originalCrossoverMonth !== -1 && (
-                                <ReferenceLine
-                                    x={originalCrossoverMonth + 1}
-                                    stroke="#fbbf24"
-                                    strokeDasharray="3 3"
-                                    strokeWidth={2}
-                                    label={{
-                                        value: 'PA > Interest',
-                                        fill: '#fbbf24',
-                                        position: 'top',
-                                        fontSize: 12,
-                                        fontWeight: 'bold'
-                                    }}
-                                />
-                            )}
-
-                            <Area
-                                type="monotone"
-                                dataKey="principalComponent"
-                                name="Principal (Monthly)"
-                                stroke="#10b981"
-                                fillOpacity={1}
-                                fill="url(#originalPrincipal)"
-                                strokeWidth={2}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="interestComponent"
-                                name="Interest (Monthly)"
-                                stroke="#f43f5e"
-                                fillOpacity={1}
-                                fill="url(#originalInterest)"
-                                strokeWidth={2}
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
-
-            {/* Actual Plan Chart */}
+        <div className="w-full space-y-6">
+            {/* Actual Plan Chart - Row 2 */}
             <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
                 <CardHeader>
                     <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
@@ -272,7 +186,7 @@ export function PAvsInterestCharts() {
                         )}
                     </p>
                 </CardHeader>
-                <CardContent className="h-[400px] w-full">
+                <CardContent className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={actualPlanData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <defs>
@@ -290,7 +204,14 @@ export function PAvsInterestCharts() {
                                 dataKey="month"
                                 stroke="var(--chart-axis)"
                                 style={{ fontSize: '12px' }}
-                                tickFormatter={(value) => value % 24 === 0 ? `M${value}` : ''}
+                                tickFormatter={(value) => {
+                                    const lastMonth = schedule.length;
+                                    // Show every 60th month (5 years), plus the first and last month
+                                    if (value === 1 || value === lastMonth || value % 60 === 0) {
+                                        return `M${value}`;
+                                    }
+                                    return '';
+                                }}
                             />
                             <YAxis
                                 stroke="var(--chart-axis)"
@@ -336,6 +257,99 @@ export function PAvsInterestCharts() {
                                 stroke="#f43f5e"
                                 fillOpacity={1}
                                 fill="url(#actualInterest)"
+                                strokeWidth={2}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+
+            {/* Original Plan Chart - Row 3 */}
+            <Card className="w-full bg-card/80 backdrop-blur-md border-border text-card-foreground shadow-xl">
+                <CardHeader>
+                    <CardTitle className="text-xl font-light text-primary uppercase tracking-widest">
+                        Original Plan
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        {loanDetails.durationMonths} months • EMI: {formatCurrency(calculationResult.emi)}
+                        {originalCrossoverMonth !== -1 && (
+                            <span className="block text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                                ⚡ Crossover at Month {originalCrossoverMonth + 1}
+                            </span>
+                        )}
+                    </p>
+                </CardHeader>
+                <CardContent className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={originalPlanData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="originalPrincipal" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                                </linearGradient>
+                                <linearGradient id="originalInterest" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.1} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" opacity={0.5} />
+                            <XAxis
+                                dataKey="month"
+                                stroke="var(--chart-axis)"
+                                style={{ fontSize: '12px' }}
+                                tickFormatter={(value) => {
+                                    const lastMonth = loanDetails.durationMonths;
+                                    // Show every 60th month (5 years), plus the first and last month
+                                    if (value === 1 || value === lastMonth || value % 60 === 0) {
+                                        return `M${value}`;
+                                    }
+                                    return '';
+                                }}
+                            />
+                            <YAxis
+                                stroke="var(--chart-axis)"
+                                tickFormatter={formatCurrency}
+                                style={{ fontSize: '12px' }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Legend
+                                wrapperStyle={{ fontSize: '14px' }}
+                                iconType="circle"
+                            />
+
+                            {/* Crossover Reference Line */}
+                            {originalCrossoverMonth !== -1 && (
+                                <ReferenceLine
+                                    x={originalCrossoverMonth + 1}
+                                    stroke="#fbbf24"
+                                    strokeDasharray="3 3"
+                                    strokeWidth={2}
+                                    label={{
+                                        value: 'PA > Interest',
+                                        fill: '#fbbf24',
+                                        position: 'top',
+                                        fontSize: 12,
+                                        fontWeight: 'bold'
+                                    }}
+                                />
+                            )}
+
+                            <Area
+                                type="monotone"
+                                dataKey="principalComponent"
+                                name="Principal (Monthly)"
+                                stroke="#10b981"
+                                fillOpacity={1}
+                                fill="url(#originalPrincipal)"
+                                strokeWidth={2}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="interestComponent"
+                                name="Interest (Monthly)"
+                                stroke="#f43f5e"
+                                fillOpacity={1}
+                                fill="url(#originalInterest)"
                                 strokeWidth={2}
                             />
                         </AreaChart>

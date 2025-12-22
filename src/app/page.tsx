@@ -48,16 +48,12 @@ export default function Home() {
             <LoanSummary />
           </div>
 
-          {/* Right Column: Amortization Table (8 cols) - Height matches InputForm */}
-          <div className="lg:col-span-8 self-stretch">
+          {/* Right Column: Amortization Table + Charts (8 cols) */}
+          <div className="lg:col-span-8 space-y-8">
             <AmortizationTable />
+            <PAvsInterestCharts />
           </div>
 
-        </div>
-
-        {/* Charts Section - Full Width */}
-        <div className="w-full max-w-7xl">
-          <PAvsInterestCharts />
         </div>
       </main>
     </ThemeProvider>
