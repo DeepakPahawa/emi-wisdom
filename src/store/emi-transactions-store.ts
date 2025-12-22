@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { EmiTransaction } from '@/types';
+import { localStorageService } from '@/services/LocalStorageService';
 
 interface EmiTransactionsStore {
     // Transactions for the current loan
@@ -12,14 +13,18 @@ interface EmiTransactionsStore {
     // Error state
     error: string | null;
 
+    // Storage mode
+    isUsingLocalStorage: boolean;
+
     // Actions
     setTransactions: (transactions: EmiTransaction[]) => void;
     setIsLoading: (loading: boolean) => void;
     setIsSaving: (saving: boolean) => void;
     setError: (error: string | null) => void;
+    setIsUsingLocalStorage: (isLocal: boolean) => void;
 
     // API actions
-    fetchTransactionsByLoanId: (loanId: string) => Promise<void>;
+    fetchTransactionsByLoanId: (loanId: string, isAuthenticated: boolean) => Promise<void>;
     clearTransactions: () => void;
 }
 
@@ -28,6 +33,7 @@ export const useEmiTransactionsStore = create<EmiTransactionsStore>((set) => ({
     isLoading: false,
     isSaving: false,
     error: null,
+    isUsingLocalStorage: false,
 
     setTransactions: (transactions) => set({ transactions }),
 
@@ -37,22 +43,33 @@ export const useEmiTransactionsStore = create<EmiTransactionsStore>((set) => ({
 
     setError: (error) => set({ error }),
 
+    setIsUsingLocalStorage: (isLocal) => set({ isUsingLocalStorage: isLocal }),
+
     clearTransactions: () => set({ transactions: [] }),
 
-    fetchTransactionsByLoanId: async (loanId: string) => {
+    fetchTransactionsByLoanId: async (loanId: string, isAuthenticated: boolean) => {
         set({ isLoading: true, error: null });
 
         try {
-            const response = await fetch(`/api/emi-transactions?loan_id=${loanId}`);
-            const result = await response.json();
+            if (isAuthenticated) {
+                // Use Supabase API
+                set({ isUsingLocalStorage: false });
+                const response = await fetch(`/api/emi-transactions?loan_id=${loanId}`);
+                const result = await response.json();
 
-            if (response.ok && result.data) {
-                set({ transactions: result.data });
+                if (response.ok && result.data) {
+                    set({ transactions: result.data });
+                } else {
+                    set({
+                        transactions: [],
+                        error: result.error || 'Failed to fetch transactions'
+                    });
+                }
             } else {
-                set({
-                    transactions: [],
-                    error: result.error || 'Failed to fetch transactions'
-                });
+                // Use LocalStorage - no API call needed
+                set({ isUsingLocalStorage: true });
+                const transactions = await localStorageService.getTransactionsByLoanId(loanId);
+                set({ transactions });
             }
         } catch (error) {
             console.error('Error fetching EMI transactions:', error);
@@ -65,3 +82,4 @@ export const useEmiTransactionsStore = create<EmiTransactionsStore>((set) => ({
         }
     },
 }));
+

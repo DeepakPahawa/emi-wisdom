@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LoanDetailsDB } from '@/types';
+import { localStorageService } from '@/services/LocalStorageService';
 
 interface LoanDetailsStore {
     // Current loan details from database
@@ -16,16 +17,20 @@ interface LoanDetailsStore {
     // Error state
     error: string | null;
 
+    // Storage mode
+    isUsingLocalStorage: boolean;
+
     // Actions
     setCurrentLoan: (loan: LoanDetailsDB | null) => void;
     setLoans: (loans: LoanDetailsDB[]) => void;
     setIsLoading: (loading: boolean) => void;
     setIsSaving: (saving: boolean) => void;
     setError: (error: string | null) => void;
+    setIsUsingLocalStorage: (isLocal: boolean) => void;
 
     // API actions
-    fetchLoanDetails: () => Promise<void>;
-    saveLoanDetails: (loan: Omit<LoanDetailsDB, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
+    fetchLoanDetails: (isAuthenticated: boolean) => Promise<void>;
+    saveLoanDetails: (loan: Omit<LoanDetailsDB, 'id' | 'created_at' | 'updated_at'>, isAuthenticated: boolean) => Promise<boolean>;
     clearCurrentLoan: () => void;
 }
 
@@ -37,6 +42,7 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
             isLoading: false,
             isSaving: false,
             error: null,
+            isUsingLocalStorage: false,
 
             setCurrentLoan: (loan) => set({ currentLoan: loan }),
 
@@ -48,23 +54,40 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
 
             setError: (error) => set({ error }),
 
+            setIsUsingLocalStorage: (isLocal) => set({ isUsingLocalStorage: isLocal }),
+
             clearCurrentLoan: () => set({ currentLoan: null }),
 
-            fetchLoanDetails: async () => {
+            fetchLoanDetails: async (isAuthenticated: boolean) => {
                 set({ isLoading: true, error: null });
 
                 try {
-                    const response = await fetch('/api/loan-details');
-                    const result = await response.json();
+                    if (isAuthenticated) {
+                        // Use Supabase API
+                        set({ isUsingLocalStorage: false });
+                        const response = await fetch('/api/loan-details');
+                        const result = await response.json();
 
-                    if (response.ok && result.data && result.data.length > 0) {
-                        // Set all loans
-                        set({ loans: result.data });
+                        if (response.ok && result.data && result.data.length > 0) {
+                            // Set all loans
+                            set({ loans: result.data });
 
-                        // Set the most recent loan as current
-                        set({ currentLoan: result.data[0] });
+                            // Set the most recent loan as current
+                            set({ currentLoan: result.data[0] });
+                        } else {
+                            set({ loans: [], currentLoan: null });
+                        }
                     } else {
-                        set({ loans: [], currentLoan: null });
+                        // Use LocalStorage - no API call needed
+                        set({ isUsingLocalStorage: true });
+                        const loans = await localStorageService.getLoanDetails();
+
+                        if (loans.length > 0) {
+                            set({ loans });
+                            set({ currentLoan: loans[0] });
+                        } else {
+                            set({ loans: [], currentLoan: null });
+                        }
                     }
                 } catch (error) {
                     console.error('Error fetching loan details:', error);
@@ -78,31 +101,47 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                 }
             },
 
-            saveLoanDetails: async (loanData) => {
+            saveLoanDetails: async (loanData, isAuthenticated: boolean) => {
                 set({ isSaving: true, error: null });
 
                 try {
-                    const response = await fetch('/api/loan-details', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(loanData),
-                    });
+                    if (isAuthenticated) {
+                        // Use Supabase API
+                        set({ isUsingLocalStorage: false });
+                        const response = await fetch('/api/loan-details', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(loanData),
+                        });
 
-                    const result = await response.json();
+                        const result = await response.json();
 
-                    if (response.ok) {
+                        if (response.ok) {
+                            // Update current loan with the saved data
+                            set({ currentLoan: result.data });
+
+                            // Refresh the loans list
+                            await get().fetchLoanDetails(isAuthenticated);
+
+                            return true;
+                        } else {
+                            set({ error: result.error || 'Failed to save loan details' });
+                            return false;
+                        }
+                    } else {
+                        // Use LocalStorage
+                        set({ isUsingLocalStorage: true });
+                        const savedLoan = await localStorageService.saveLoanDetails(loanData);
+
                         // Update current loan with the saved data
-                        set({ currentLoan: result.data });
+                        set({ currentLoan: savedLoan });
 
                         // Refresh the loans list
-                        await get().fetchLoanDetails();
+                        await get().fetchLoanDetails(isAuthenticated);
 
                         return true;
-                    } else {
-                        set({ error: result.error || 'Failed to save loan details' });
-                        return false;
                     }
                 } catch (error) {
                     console.error('Error saving loan details:', error);

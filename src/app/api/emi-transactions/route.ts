@@ -6,6 +6,14 @@ export async function POST(request: NextRequest) {
     try {
         const body: CreateEmiTransactionRequest = await request.json();
 
+        // Reject local IDs - they should not be used with Supabase
+        if (body.loan_id.startsWith('local-')) {
+            return NextResponse.json(
+                { error: 'Cannot save transactions with local loan ID. Please save loan details first to get a Supabase ID.' },
+                { status: 400 }
+            );
+        }
+
         // Validate required fields
         if (!body.loan_id || !body.emi_date || !body.month_number || !body.transaction_type || body.amount_paid === undefined) {
             return NextResponse.json(
@@ -123,6 +131,13 @@ export async function GET(request: NextRequest) {
         }
 
         if (loanId) {
+            // Reject local IDs
+            if (loanId.startsWith('local-')) {
+                return NextResponse.json(
+                    { error: 'Cannot fetch transactions with local loan ID.' },
+                    { status: 400 }
+                );
+            }
             query = query.eq('loan_id', loanId);
         }
 
@@ -299,6 +314,14 @@ export async function PATCH(request: NextRequest) {
 
         const loanId = body.transactions[0].loan_id;
         const transactionType = body.transactions[0].transaction_type;
+
+        // Reject local IDs
+        if (loanId.startsWith('local-')) {
+            return NextResponse.json(
+                { error: 'Cannot save transactions with local loan ID. Please save loan details first.' },
+                { status: 400 }
+            );
+        }
 
         // Fetch existing transactions for this loan and transaction type
         const { data: existingTransactions, error: fetchError } = await supabase

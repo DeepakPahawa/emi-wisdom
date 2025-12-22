@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/server';
 import { CreateLoanDetailsRequest, LoanDetailsDB } from '@/types';
 
 export async function POST(request: NextRequest) {
     try {
+        // Get the authenticated user from the session (refreshed by middleware)
+        const supabase = await createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized. Please login to save loan details.' },
+                { status: 401 }
+            );
+        }
+
+        const userId = session.user.id;
         const body: CreateLoanDetailsRequest = await request.json();
 
         // Validate required fields
@@ -32,11 +44,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check if loan with this loan_number already exists
+        // Check if loan with this loan_number already exists for this user
         const { data: existingLoan } = await supabase
             .from('loan_details')
             .select('id')
             .eq('loan_number', body.loan_number)
+            .eq('user_id', userId)
             .maybeSingle();
 
         let data, error;
@@ -61,11 +74,12 @@ export async function POST(request: NextRequest) {
             data = updateResult.data;
             error = updateResult.error;
         } else {
-            // Insert new loan
+            // Insert new loan with user_id
             const insertResult = await supabase
                 .from('loan_details')
                 .insert([
                     {
+                        user_id: userId,
                         loan_number: body.loan_number,
                         principal_amount: body.principal_amount,
                         original_interest_rate: body.original_interest_rate,
@@ -111,6 +125,18 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
+        // Get the authenticated user from the session (refreshed by middleware)
+        const supabase = await createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+            return NextResponse.json(
+                { error: 'Unauthorized. Please login to fetch loan details.' },
+                { status: 401 }
+            );
+        }
+
+        const userId = session.user.id;
         const { searchParams } = new URL(request.url);
         const loanNumber = searchParams.get('loan_number');
         const loanId = searchParams.get('id');
@@ -118,6 +144,7 @@ export async function GET(request: NextRequest) {
         let query = supabase
             .from('loan_details')
             .select('*')
+            .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
         if (loanNumber) {
@@ -157,6 +184,7 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
+        const supabase = await createClient();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

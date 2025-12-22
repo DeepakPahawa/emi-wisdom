@@ -24,7 +24,7 @@ export function UserProfile() {
             console.error('Error signing out:', error.message)
             alert('Failed to sign out. Please try again.')
         } else {
-            router.push('/login')
+            router.push('/')
         }
     }
 

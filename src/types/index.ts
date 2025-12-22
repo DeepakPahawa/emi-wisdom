@@ -52,6 +52,7 @@ export interface LoanSummary {
 // EMI Transaction types for database
 export interface EmiTransaction {
     id?: string;
+    user_id?: string; // User ID for authentication
     loan_id?: string; // For future multi-loan support
     emi_date: string; // ISO date string
     month_number: number;
@@ -78,6 +79,7 @@ export type LoanLabel = 'BusinessLoan' | 'CarLoan' | 'EducationLoan' | 'GoldLoan
 
 export interface LoanDetailsDB {
     id?: string;
+    user_id?: string; // User ID for authentication
     loan_number: string;
     principal_amount: number;
     original_interest_rate: number;

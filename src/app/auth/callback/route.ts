@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
@@ -21,6 +21,9 @@ export async function GET(request: NextRequest) {
         try {
             const cookieStore = await cookies()
 
+            // Create a response object to set cookies
+            const response = NextResponse.redirect(new URL('/', requestUrl.origin))
+
             const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
             const supabaseKey =
                 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
@@ -34,13 +37,16 @@ export async function GET(request: NextRequest) {
                 supabaseKey!,
                 {
                     cookies: {
-                        getAll() {
-                            return cookieStore.getAll()
+                        get(name: string) {
+                            return cookieStore.get(name)?.value
                         },
-                        setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
-                            cookiesToSet.forEach(({ name, value, options }) => {
-                                cookieStore.set(name, value, options)
-                            })
+                        set(name: string, value: string, options: CookieOptions) {
+                            cookieStore.set({ name, value, ...options })
+                            response.cookies.set({ name, value, ...options })
+                        },
+                        remove(name: string, options: CookieOptions) {
+                            cookieStore.set({ name, value: '', ...options })
+                            response.cookies.set({ name, value: '', ...options })
                         },
                     },
                 }
@@ -55,6 +61,9 @@ export async function GET(request: NextRequest) {
                     new URL(`/?error=auth_error&error_description=${exchangeError.message}`, requestUrl.origin)
                 )
             }
+
+            // Return the response with cookies set
+            return response
         } catch (err) {
             console.error('Unexpected error in auth callback:', err)
             return NextResponse.redirect(
@@ -63,6 +72,6 @@ export async function GET(request: NextRequest) {
         }
     }
 
-    // Redirect to home page after successful authentication
+    // Redirect to home page if no code
     return NextResponse.redirect(new URL('/', requestUrl.origin))
 }

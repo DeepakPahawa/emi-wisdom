@@ -59,8 +59,8 @@ export function InputForm() {
 
     // Fetch loan details on mount using the store
     useEffect(() => {
-        fetchLoanDetails();
-    }, [fetchLoanDetails]);
+        fetchLoanDetails(!!user);
+    }, [fetchLoanDetails, user]);
 
     // Update form fields when currentLoan changes in the store
     useEffect(() => {
@@ -110,10 +110,10 @@ export function InputForm() {
 
     const handleReset = async () => {
         try {
-            // Fetch the latest loan details from the database
-            await fetchLoanDetails();
+            // Fetch the latest loan details from the database or local storage
+            await fetchLoanDetails(!!user);
 
-            // If we have a loan in the database, use those values
+            // If we have a loan in the database/storage, use those values
             if (currentLoan) {
                 setAmount(currentLoan.principal_amount);
                 setRate(currentLoan.current_interest_rate);
@@ -168,7 +168,7 @@ export function InputForm() {
 
 
     const handleApplyPrimary = async () => {
-        // Check if user is authenticated before saving
+        // Check if user is authenticated before saving to Supabase
         if (!user) {
             setShowLoginDialog(true);
             return;
@@ -203,11 +203,11 @@ export function InputForm() {
             startDate: startDate
         });
 
-        // If we have loan metadata (from secondary card), also update the database
+        // If we have loan metadata (from secondary card), also update the database/storage
         if (currentLoan || (bankName.trim() || loanLabelText.trim())) {
             const finalLoanNumber = loanLabelText.trim() || currentLoan?.loan_number || `LOAN-${Date.now()}`;
 
-            await saveLoanDetails({
+            const success = await saveLoanDetails({
                 loan_number: finalLoanNumber,
                 principal_amount: principal,
                 original_interest_rate: currentLoan?.original_interest_rate || interestRate,
@@ -216,22 +216,30 @@ export function InputForm() {
                 loan_tenure_months: years * 12,
                 bank_name: bankName.trim() || currentLoan?.bank_name || 'Not Specified',
                 loan_label: loanLabel,
-            });
+            }, !!user);
 
             // Update loan number if it was auto-generated
             if (!loanLabelText.trim() && !currentLoan?.loan_number) {
                 setLoanLabelText(finalLoanNumber);
             }
-        }
 
-        toast({
-            title: "Applied!",
-            description: "Loan parameters updated successfully",
-        });
+            if (success) {
+                toast({
+                    title: "✅ Saved!",
+                    description: "Loan details saved successfully",
+                });
+            }
+        } else {
+            // Just update the calculation, no save
+            toast({
+                title: "Applied!",
+                description: "Loan parameters updated successfully",
+            });
+        }
     };
 
     const handleApplySecondary = async () => {
-        // Check if user is authenticated before saving
+        // Check if user is authenticated before saving to Supabase
         if (!user) {
             setShowLoginDialog(true);
             return;
@@ -272,7 +280,7 @@ export function InputForm() {
             loan_tenure_months: years * 12,
             bank_name: bankName.trim() || 'Not Specified',
             loan_label: loanLabel,
-        });
+        }, !!user);
 
         if (success) {
             setIsEditMode(false);

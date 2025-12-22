@@ -16,12 +16,15 @@ import { CreateEmiTransactionRequest } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useLoanDetailsStore } from '@/store/loan-details-store';
 import { useEmiTransactionsStore } from '@/store/emi-transactions-store';
+import { useAuth } from '@/contexts/AuthContext';
+import { localStorageService } from '@/services/LocalStorageService';
 import { ArrowLeftRight, Edit2, Trash2, Loader2, ArrowDownUp } from 'lucide-react';
 
 export function AmortizationTable() {
     const { schedule, calculationResult, updatePaidEmi, updatePartPayment } = useEmiStore();
     const { currentLoan } = useLoanDetailsStore();
     const { transactions, fetchTransactionsByLoanId } = useEmiTransactionsStore();
+    const { user } = useAuth();
     const [editingCell, setEditingCell] = useState<{ month: number; field: 'paidEmi' | 'partPayment' } | null>(null);
     const [hoveredCell, setHoveredCell] = useState<number | null>(null);
     const [hoveredPartPaymentCell, setHoveredPartPaymentCell] = useState<number | null>(null);
@@ -56,9 +59,9 @@ export function AmortizationTable() {
     // Fetch transactions when currentLoan changes
     useEffect(() => {
         if (currentLoan?.id) {
-            fetchTransactionsByLoanId(currentLoan.id);
+            fetchTransactionsByLoanId(currentLoan.id, !!user);
         }
-    }, [currentLoan?.id, fetchTransactionsByLoanId]);
+    }, [currentLoan?.id, fetchTransactionsByLoanId, user]);
 
     // Load transactions into the schedule when they're fetched
     useEffect(() => {
@@ -94,6 +97,16 @@ export function AmortizationTable() {
                 return null;
             }
 
+            // If user is authenticated, reject local IDs
+            if (user && currentLoan.id.startsWith('local-')) {
+                toast({
+                    title: "⚠️ Please Save Loan Details",
+                    description: "You're logged in! Please click 'Save Details' to sync your loan to the cloud before adding transactions.",
+                    variant: "destructive",
+                });
+                return null;
+            }
+
             // For Part Payment (part_payment): entire amount goes to principal, 0 to interest
             // For Paid EMI (emi): use the scheduled principal/interest breakdown
             const principalComponent = transactionType === 'part_payment'
@@ -104,7 +117,7 @@ export function AmortizationTable() {
                 ? 0  // Part Payment: no interest
                 : point.interestComponent;  // Paid EMI: use schedule
 
-            const transactionData: CreateEmiTransactionRequest = {
+            const transactionData = {
                 loan_id: currentLoan.id, // Include loan_id from currentLoan
                 emi_date: point.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
                 month_number: month,
@@ -114,33 +127,52 @@ export function AmortizationTable() {
                 interest_component: interestComponent,
             };
 
-            const response = await fetch('/api/emi-transactions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(transactionData),
-            });
+            if (user) {
+                // Use Supabase API
+                const response = await fetch('/api/emi-transactions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(transactionData),
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to save transaction');
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to save transaction');
+                }
+
+                const actionText = result.isUpdate ? 'Updated' : 'Saved';
+                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
+                toast({
+                    title: `✅ Transaction ${actionText}`,
+                    description: `${typeText} of ₹${amount.toLocaleString('en-IN')} ${actionText.toLowerCase()} successfully`,
+                });
+
+                // Refresh transactions after saving
+                if (currentLoan?.id) {
+                    fetchTransactionsByLoanId(currentLoan.id, true);
+                }
+
+                return result.data;
+            } else {
+                // Use LocalStorage
+                const savedTransaction = await localStorageService.saveTransaction(transactionData);
+
+                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
+                toast({
+                    title: `✅ Transaction Saved Locally`,
+                    description: `${typeText} of ₹${amount.toLocaleString('en-IN')} saved to local storage`,
+                });
+
+                // Refresh transactions after saving
+                if (currentLoan?.id) {
+                    fetchTransactionsByLoanId(currentLoan.id, false);
+                }
+
+                return savedTransaction;
             }
-
-            const actionText = result.isUpdate ? 'Updated' : 'Saved';
-            const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
-            toast({
-                title: `✅ Transaction ${actionText}`,
-                description: `${typeText} of ₹${amount.toLocaleString('en-IN')} ${actionText.toLowerCase()} successfully`,
-            });
-
-            // Refresh transactions after saving
-            if (currentLoan?.id) {
-                fetchTransactionsByLoanId(currentLoan.id);
-            }
-
-            return result.data;
         } catch (error) {
             console.error('Error saving EMI transaction:', error);
             toast({
@@ -169,31 +201,48 @@ export function AmortizationTable() {
             );
 
             if (!transactionToDelete?.id) {
-                return; // Transaction doesn't exist in database
+                return; // Transaction doesn't exist in database/storage
             }
 
-            const response = await fetch(`/api/emi-transactions?id=${transactionToDelete.id}`, {
-                method: 'DELETE',
-            });
+            if (user) {
+                // Use Supabase API
+                const response = await fetch(`/api/emi-transactions?id=${transactionToDelete.id}`, {
+                    method: 'DELETE',
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to delete transaction');
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to delete transaction');
+                }
+
+                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
+                toast({
+                    title: `🗑️ Transaction Deleted`,
+                    description: `${typeText} for month ${month} removed successfully`,
+                });
+
+                // Refresh transactions after deleting
+                if (currentLoan?.id) {
+                    fetchTransactionsByLoanId(currentLoan.id, true);
+                }
+            } else {
+                // Use LocalStorage
+                await localStorageService.deleteTransaction(transactionToDelete.id);
+
+                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
+                toast({
+                    title: `🗑️ Transaction Deleted`,
+                    description: `${typeText} for month ${month} removed from local storage`,
+                });
+
+                // Refresh transactions after deleting
+                if (currentLoan?.id) {
+                    fetchTransactionsByLoanId(currentLoan.id, false);
+                }
             }
 
-            const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
-            toast({
-                title: `🗑️ Transaction Deleted`,
-                description: `${typeText} for month ${month} removed successfully`,
-            });
-
-            // Refresh transactions after deleting
-            if (currentLoan?.id) {
-                fetchTransactionsByLoanId(currentLoan.id);
-            }
-
-            return result;
+            return;
         } catch (error) {
             console.error('Error deleting EMI transaction:', error);
             toast({
@@ -329,7 +378,7 @@ export function AmortizationTable() {
 
             // Refresh transactions from database
             if (currentLoan?.id) {
-                fetchTransactionsByLoanId(currentLoan.id);
+                fetchTransactionsByLoanId(currentLoan.id, !!user);
             }
         } catch (error) {
             console.error('Error syncing transactions:', error);
@@ -408,7 +457,7 @@ export function AmortizationTable() {
 
             // Refresh transactions from database
             if (currentLoan?.id) {
-                fetchTransactionsByLoanId(currentLoan.id);
+                fetchTransactionsByLoanId(currentLoan.id, !!user);
             }
         } catch (error) {
             console.error('Error deleting transactions:', error);
@@ -509,7 +558,7 @@ export function AmortizationTable() {
 
             // Refresh transactions from database
             if (currentLoan?.id) {
-                fetchTransactionsByLoanId(currentLoan.id);
+                fetchTransactionsByLoanId(currentLoan.id, !!user);
             }
         } catch (error) {
             console.error('Error copying Part Payment:', error);
@@ -562,7 +611,7 @@ export function AmortizationTable() {
 
             // Refresh transactions from database
             if (currentLoan?.id) {
-                fetchTransactionsByLoanId(currentLoan.id);
+                fetchTransactionsByLoanId(currentLoan.id, !!user);
             }
         } catch (error) {
             console.error('Error deleting Part Payment:', error);
