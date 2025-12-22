@@ -1,52 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabaseClient'
 
-/**
- * Test endpoint to verify Supabase connection
- * GET /api/test-supabase
- */
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
-        // Test the connection by checking if we can reach Supabase
-        const { data, error } = await supabase.from('_test_connection').select('*').limit(1)
+        // Test basic connection
+        const { data, error } = await supabase
+            .from('loan_details')
+            .select('count')
+            .limit(1)
 
-        // Even if the table doesn't exist, we'll get a specific error that confirms connection
         if (error) {
-            // Check if it's a "table not found" error (which means connection is working)
-            if (error.code === '42P01' || error.message.includes('does not exist')) {
-                return NextResponse.json({
-                    success: true,
-                    message: 'Supabase connection successful! ✅',
-                    note: 'The test table does not exist, but the connection is working.',
-                    connectionDetails: {
+            return NextResponse.json(
+                {
+                    status: 'error',
+                    message: 'Supabase query failed',
+                    error: error.message,
+                    details: error,
+                    config: {
                         url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-                        keyType: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
-                            ? 'publishable (new)'
-                            : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-                                ? 'publishable (new)'
-                                : 'anon (old)',
-                    },
-                }, { status: 200 })
-            }
-
-            // Other errors
-            return NextResponse.json({
-                success: false,
-                error: error.message,
-                code: error.code,
-            }, { status: 500 })
+                        hasPublishableKey: !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
+                        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+                    }
+                },
+                { status: 500 }
+            )
         }
 
         return NextResponse.json({
-            success: true,
-            message: 'Supabase connection successful! ✅',
+            status: 'success',
+            message: 'Supabase connection is working!',
             data,
-        }, { status: 200 })
-    } catch (error: any) {
-        return NextResponse.json({
-            success: false,
-            error: error.message || 'Unknown error',
-            message: 'Failed to connect to Supabase. Please check your environment variables.',
-        }, { status: 500 })
+            config: {
+                url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+                hasPublishableKey: !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
+                hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            }
+        })
+
+    } catch (error) {
+        return NextResponse.json(
+            {
+                status: 'error',
+                message: 'Unexpected error',
+                error: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                config: {
+                    url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+                    hasPublishableKey: !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY,
+                    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+                }
+            },
+            { status: 500 }
+        )
     }
 }

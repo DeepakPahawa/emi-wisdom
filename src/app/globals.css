@@ -50,10 +50,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.985 0 0);
-  /* Light Gray/White */
+  --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-  /* Dark Gray/Black */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -81,6 +79,9 @@
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
   /* Custom Card Backgrounds */
   --card-blue: oklch(0.97 0.02 250 / 0.5);
   /* Blue 50 */
@@ -119,7 +120,7 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: oklch(0.371 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
@@ -137,7 +138,7 @@
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
 
   /* Custom Card Backgrounds Dark */
   --card-blue: oklch(0.2 0.05 250 / 0.2);
@@ -171,16 +172,5 @@
 
   body {
     @apply bg-background text-foreground transition-colors duration-300;
-    /* Use variables for dynamic background */
-  }
-
-  /* Add specific overrides if needed */
-  .dark body {
-    background: radial-gradient(circle at top left, #1e1b4b, #0f172a, #000000);
-  }
-
-  /* Light mode simplified or nice gradient */
-  :root body {
-    background: radial-gradient(circle at top left, #f3f4f6, #e5e7eb, #d1d5db);
   }
 }
