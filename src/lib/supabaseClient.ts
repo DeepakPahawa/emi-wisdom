@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+"use client"
+
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
@@ -25,10 +27,8 @@ if (!supabaseKey) {
     )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-    },
-})
+// Use createBrowserClient from @supabase/ssr for proper cookie-based auth
+// This ensures the session is stored in cookies, not localStorage
+export const supabase = createBrowserClient(supabaseUrl, supabaseKey)
+
 

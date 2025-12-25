@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/route-client';
 import { CreateLoanDetailsRequest, LoanDetailsDB } from '@/types';
 
 export async function POST(request: NextRequest) {
     try {
-        // Get the authenticated user from the session (refreshed by middleware)
-        const supabase = await createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        // Get the authenticated user (validates with Supabase Auth server for security)
+        const supabase = createClient(request);
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (!session?.user) {
+
+        if (!user) {
+            console.error('[API /loan-details POST] No authenticated user - returning 401');
             return NextResponse.json(
                 { error: 'Unauthorized. Please login to save loan details.' },
                 { status: 401 }
             );
         }
 
-        const userId = session.user.id;
+        const userId = user.id;
         const body: CreateLoanDetailsRequest = await request.json();
 
         // Validate required fields
@@ -125,18 +127,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        // Get the authenticated user from the session (refreshed by middleware)
-        const supabase = await createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        // Get the authenticated user (validates with Supabase Auth server for security)
+        const supabase = createClient(request);
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-        if (!session?.user) {
+
+        if (!user) {
+            console.error('[API /loan-details GET] No authenticated user - returning 401');
             return NextResponse.json(
                 { error: 'Unauthorized. Please login to fetch loan details.' },
                 { status: 401 }
             );
         }
 
-        const userId = session.user.id;
+        const userId = user.id;
         const { searchParams } = new URL(request.url);
         const loanNumber = searchParams.get('loan_number');
         const loanId = searchParams.get('id');
@@ -184,7 +188,7 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const supabase = await createClient();
+        const supabase = createClient(request);
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 

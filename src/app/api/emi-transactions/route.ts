@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/route-client';
 import { CreateEmiTransactionRequest, EmiTransaction } from '@/types';
 
 export async function POST(request: NextRequest) {
     try {
+        const supabase = createClient(request);
         const body: CreateEmiTransactionRequest = await request.json();
 
         // Reject local IDs - they should not be used with Supabase
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
+        const supabase = createClient(request);
         const { searchParams } = new URL(request.url);
         const monthNumber = searchParams.get('month_number');
         const loanId = searchParams.get('loan_id');
@@ -170,6 +172,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
+        const supabase = createClient(request);
         const body = await request.json();
         const { id, ...updateData } = body;
 
@@ -214,6 +217,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
+        const supabase = createClient(request);
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
         const loanId = searchParams.get('loan_id');
@@ -285,6 +289,7 @@ export async function DELETE(request: NextRequest) {
 // PATCH - Batch create/update EMI transactions
 export async function PATCH(request: NextRequest) {
     try {
+        const supabase = createClient(request);
         const body: { transactions: CreateEmiTransactionRequest[] } = await request.json();
 
         if (!body.transactions || !Array.isArray(body.transactions) || body.transactions.length === 0) {

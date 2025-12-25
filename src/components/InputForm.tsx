@@ -203,37 +203,42 @@ export function InputForm() {
             startDate: startDate
         });
 
-        // If we have loan metadata (from secondary card), also update the database/storage
-        if (currentLoan || (bankName.trim() || loanLabelText.trim())) {
-            const finalLoanNumber = loanLabelText.trim() || currentLoan?.loan_number || `LOAN-${Date.now()}`;
+        // Always save to database/storage when user is authenticated
+        console.log('[InputForm] handleApplyPrimary - Saving loan details', {
+            hasUser: !!user,
+            currentLoan: !!currentLoan,
+            bankName: bankName.trim(),
+            loanLabelText: loanLabelText.trim()
+        });
 
-            const success = await saveLoanDetails({
-                loan_number: finalLoanNumber,
-                principal_amount: principal,
-                original_interest_rate: currentLoan?.original_interest_rate || interestRate,
-                current_interest_rate: interestRate,
-                emi_start_date: startDate.toISOString().split('T')[0],
-                loan_tenure_months: years * 12,
-                bank_name: bankName.trim() || currentLoan?.bank_name || 'Not Specified',
-                loan_label: loanLabel,
-            }, !!user);
+        const finalLoanNumber = loanLabelText.trim() || currentLoan?.loan_number || `LOAN-${Date.now()}`;
 
-            // Update loan number if it was auto-generated
-            if (!loanLabelText.trim() && !currentLoan?.loan_number) {
-                setLoanLabelText(finalLoanNumber);
-            }
+        const success = await saveLoanDetails({
+            loan_number: finalLoanNumber,
+            principal_amount: principal,
+            original_interest_rate: currentLoan?.original_interest_rate || interestRate,
+            current_interest_rate: interestRate,
+            emi_start_date: startDate.toISOString().split('T')[0],
+            loan_tenure_months: years * 12,
+            bank_name: bankName.trim() || currentLoan?.bank_name || 'Not Specified',
+            loan_label: loanLabel,
+        }, !!user);
 
-            if (success) {
-                toast({
-                    title: "✅ Saved!",
-                    description: "Loan details saved successfully",
-                });
-            }
-        } else {
-            // Just update the calculation, no save
+        // Update loan number if it was auto-generated
+        if (!loanLabelText.trim() && !currentLoan?.loan_number) {
+            setLoanLabelText(finalLoanNumber);
+        }
+
+        if (success) {
             toast({
-                title: "Applied!",
-                description: "Loan parameters updated successfully",
+                title: "✅ Saved!",
+                description: "Loan details saved successfully",
+            });
+        } else {
+            toast({
+                title: "❌ Error",
+                description: "Failed to save loan details. Please try again.",
+                variant: "destructive"
             });
         }
     };

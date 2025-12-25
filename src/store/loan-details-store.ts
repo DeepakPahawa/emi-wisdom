@@ -65,8 +65,20 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                     if (isAuthenticated) {
                         // Use Supabase API
                         set({ isUsingLocalStorage: false });
-                        const response = await fetch('/api/loan-details');
+                        console.log('[LoanDetailsStore] Fetching loan details from API, isAuthenticated:', isAuthenticated);
+
+                        const response = await fetch('/api/loan-details', {
+                            credentials: 'include', // Include cookies for authentication
+                        });
                         const result = await response.json();
+
+                        console.log('[LoanDetailsStore] API response:', {
+                            status: response.status,
+                            ok: response.ok,
+                            hasData: !!result.data,
+                            dataLength: result.data?.length,
+                            error: result.error
+                        });
 
                         if (response.ok && result.data && result.data.length > 0) {
                             // Set all loans
@@ -113,6 +125,7 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                             headers: {
                                 'Content-Type': 'application/json',
                             },
+                            credentials: 'include', // Include cookies for authentication
                             body: JSON.stringify(loanData),
                         });
 
