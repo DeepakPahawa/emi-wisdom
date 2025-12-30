@@ -1,8 +1,9 @@
-import { EmiTransaction, CreateEmiTransactionRequest } from '@/types';
+import { EmiTransaction, CreateEmiTransactionRequest, IndexedDBEmiTransaction } from '@/types';
+import { storageService } from './StorageService';
 
 /**
- * EmiTransactionsService - Handles all API calls related to EMI transactions
- * This service acts as an intermediary between components/stores and the API routes
+ * EmiTransactionsService - Handles all operations related to EMI transactions
+ * Automatically uses IndexedDB (offline) or Supabase (authenticated)
  */
 
 interface ApiResponse<T> {
@@ -17,28 +18,27 @@ interface ApiResponse<T> {
 }
 
 class EmiTransactionsService {
-    private readonly baseUrl = '/api/emi-transactions';
-
     /**
      * Fetch all transactions for a specific loan
      */
     async fetchTransactionsByLoanId(loanId: string): Promise<EmiTransaction[]> {
         try {
-            const response = await fetch(`${this.baseUrl}?loan_id=${encodeURIComponent(loanId)}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+            const transactions = await storageService.getEmiTransactions(loanId);
 
-            const result: ApiResponse<EmiTransaction[]> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            return result.data || [];
+            // Convert IndexedDB format to EmiTransaction format
+            return transactions.map(t => ({
+                id: t.id,
+                user_id: t.user_id || undefined,
+                loan_id: t.loan_id,
+                month_number: t.month_number,
+                emi_date: t.emi_date,
+                transaction_type: t.transaction_type,
+                amount_paid: t.amount_paid,
+                principal_component: t.principal_component,
+                interest_component: t.interest_component,
+                created_at: t.created_at,
+                updated_at: t.updated_at,
+            }));
         } catch (error) {
             console.error('[EmiTransactionsService] Error fetching transactions:', error);
             throw error;
@@ -48,23 +48,10 @@ class EmiTransactionsService {
     /**
      * Fetch transactions by month number
      */
-    async fetchTransactionsByMonth(monthNumber: number): Promise<EmiTransaction[]> {
+    async fetchTransactionsByMonth(loanId: string, monthNumber: number): Promise<EmiTransaction[]> {
         try {
-            const response = await fetch(`${this.baseUrl}?month_number=${monthNumber}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result: ApiResponse<EmiTransaction[]> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            return result.data || [];
+            const allTransactions = await this.fetchTransactionsByLoanId(loanId);
+            return allTransactions.filter(t => t.month_number === monthNumber);
         } catch (error) {
             console.error('[EmiTransactionsService] Error fetching transactions by month:', error);
             throw error;
@@ -74,33 +61,44 @@ class EmiTransactionsService {
     /**
      * Create or update a single transaction
      */
-    async saveTransaction(transaction: CreateEmiTransactionRequest): Promise<{
+    async saveTransaction(transaction: CreateEmiTransactionRequest & { id?: string }): Promise<{
         data: EmiTransaction;
         isUpdate: boolean;
     }> {
         try {
-            const response = await fetch(this.baseUrl, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(transaction),
-            });
+            const isUpdate = !!transaction.id;
 
-            const result: ApiResponse<EmiTransaction> = await response.json();
+            // Get existing transactions
+            const existingTransactions = await storageService.getEmiTransactions(transaction.loan_id);
 
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
+            // Create the transaction object
+            const newTransaction: Partial<IndexedDBEmiTransaction> = {
+                id: transaction.id,
+                loan_id: transaction.loan_id,
+                month_number: transaction.month_number,
+                emi_date: transaction.emi_date,
+                transaction_type: transaction.transaction_type,
+                amount_paid: transaction.amount_paid,
+                principal_component: transaction.principal_component,
+                interest_component: transaction.interest_component,
+            };
+
+            // Update or add the transaction
+            let updatedTransactions: Partial<IndexedDBEmiTransaction>[];
+            if (isUpdate) {
+                updatedTransactions = existingTransactions.map(t =>
+                    t.id === transaction.id ? { ...t, ...newTransaction } : t
+                );
+            } else {
+                updatedTransactions = [...existingTransactions, newTransaction];
             }
 
-            if (!result.data) {
-                throw new Error('No data returned from server');
-            }
+            // Save all transactions
+            await storageService.saveEmiTransactions(transaction.loan_id, updatedTransactions);
 
             return {
-                data: result.data,
-                isUpdate: result.isUpdate || false,
+                data: newTransaction as EmiTransaction,
+                isUpdate,
             };
         } catch (error) {
             console.error('[EmiTransactionsService] Error saving transaction:', error);
@@ -111,31 +109,28 @@ class EmiTransactionsService {
     /**
      * Batch create/update multiple transactions
      */
-    async batchSaveTransactions(transactions: CreateEmiTransactionRequest[]): Promise<{
+    async batchSaveTransactions(loanId: string, transactions: CreateEmiTransactionRequest[]): Promise<{
         count: number;
         inserted: number;
         updated: number;
     }> {
         try {
-            const response = await fetch(this.baseUrl, {
-                method: 'PATCH',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ transactions }),
-            });
+            const indexedTransactions: Partial<IndexedDBEmiTransaction>[] = transactions.map(t => ({
+                loan_id: loanId,
+                month_number: t.month_number,
+                emi_date: t.emi_date,
+                transaction_type: t.transaction_type,
+                amount_paid: t.amount_paid,
+                principal_component: t.principal_component,
+                interest_component: t.interest_component,
+            }));
 
-            const result: ApiResponse<void> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
+            await storageService.saveEmiTransactions(loanId, indexedTransactions);
 
             return {
-                count: result.count || 0,
-                inserted: result.inserted || 0,
-                updated: result.updated || 0,
+                count: transactions.length,
+                inserted: transactions.length,
+                updated: 0,
             };
         } catch (error) {
             console.error('[EmiTransactionsService] Error batch saving transactions:', error);
@@ -148,26 +143,11 @@ class EmiTransactionsService {
      */
     async updateTransaction(id: string, updateData: Partial<EmiTransaction>): Promise<EmiTransaction> {
         try {
-            const response = await fetch(this.baseUrl, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id, ...updateData }),
-            });
+            await storageService.updateEmiTransaction(id, updateData as Partial<IndexedDBEmiTransaction>);
 
-            const result: ApiResponse<EmiTransaction> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            if (!result.data) {
-                throw new Error('No data returned from server');
-            }
-
-            return result.data;
+            // Return the updated transaction (we'd need to fetch it)
+            // For now, return the update data with the id
+            return { id, ...updateData } as EmiTransaction;
         } catch (error) {
             console.error('[EmiTransactionsService] Error updating transaction:', error);
             throw error;
@@ -175,25 +155,13 @@ class EmiTransactionsService {
     }
 
     /**
-     * Delete a single transaction by ID
+     * Delete transactions for a loan
      */
-    async deleteTransaction(id: string): Promise<void> {
+    async deleteTransactions(loanId: string): Promise<void> {
         try {
-            const response = await fetch(`${this.baseUrl}?id=${encodeURIComponent(id)}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result: ApiResponse<void> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
+            await storageService.deleteEmiTransactions(loanId);
         } catch (error) {
-            console.error('[EmiTransactionsService] Error deleting transaction:', error);
+            console.error('[EmiTransactionsService] Error deleting transactions:', error);
             throw error;
         }
     }
@@ -207,27 +175,19 @@ class EmiTransactionsService {
         fromMonth: number
     ): Promise<number> {
         try {
-            const params = new URLSearchParams({
-                loan_id: loanId,
-                transaction_type: transactionType,
-                from_month: fromMonth.toString(),
-            });
+            const allTransactions = await storageService.getEmiTransactions(loanId);
 
-            const response = await fetch(`${this.baseUrl}?${params.toString()}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+            // Filter out transactions from the specified month onwards with the specified type
+            const remainingTransactions = allTransactions.filter(
+                t => !(t.month_number >= fromMonth && t.transaction_type === transactionType)
+            );
 
-            const result: ApiResponse<void> = await response.json();
+            const deletedCount = allTransactions.length - remainingTransactions.length;
 
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
+            // Save the remaining transactions
+            await storageService.saveEmiTransactions(loanId, remainingTransactions);
 
-            return result.count || 0;
+            return deletedCount;
         } catch (error) {
             console.error('[EmiTransactionsService] Error deleting transactions from month:', error);
             throw error;

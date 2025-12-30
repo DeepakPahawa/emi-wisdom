@@ -102,3 +102,49 @@ export interface CreateLoanDetailsRequest {
     bank_name: string;
     loan_label: LoanLabel;
 }
+
+// Storage Management Types
+export type StorageBackend = 'indexeddb' | 'supabase' | 'memory';
+
+export interface StorageConfig {
+    backend: StorageBackend;
+    isSyncing: boolean;
+    lastSyncedAt: string | null;
+    syncError: string | null;
+}
+
+export interface SyncResult {
+    success: boolean;
+    recordsSynced: number;
+    errors: string[];
+}
+
+// IndexedDB specific types
+export interface IndexedDBLoanDetails {
+    id: string;
+    user_id: string | null;
+    loan_number: string;
+    principal_amount: number;
+    original_interest_rate: number;
+    current_interest_rate: number;
+    emi_start_date: string;
+    loan_tenure_months: number;
+    bank_name: string;
+    loan_label: LoanLabel;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface IndexedDBEmiTransaction {
+    id: string;
+    loan_id: string;
+    user_id: string | null;
+    month_number: number;
+    emi_date: string;
+    transaction_type: 'emi' | 'part_payment';
+    amount_paid: number;
+    principal_component: number;
+    interest_component: number;
+    created_at: string;
+    updated_at: string;
+}

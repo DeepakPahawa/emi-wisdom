@@ -1,8 +1,9 @@
 import { LoanDetailsDB, CreateLoanDetailsRequest } from '@/types';
+import { storageService } from './StorageService';
 
 /**
- * LoanDetailsService - Handles all API calls related to loan details
- * This service acts as an intermediary between components/stores and the API routes
+ * LoanDetailsService - Handles all operations related to loan details
+ * Automatically uses IndexedDB (offline) or Supabase (authenticated)
  */
 
 interface ApiResponse<T> {
@@ -14,56 +15,15 @@ interface ApiResponse<T> {
 }
 
 class LoanDetailsService {
-    private readonly baseUrl = '/api/loan-details';
-
     /**
-     * Fetch all loan details for the authenticated user
+     * Fetch loan details for the current user
      */
-    async fetchLoanDetails(): Promise<LoanDetailsDB[]> {
+    async fetchLoanDetails(): Promise<LoanDetailsDB | null> {
         try {
-            const response = await fetch(this.baseUrl, {
-                method: 'GET',
-                credentials: 'include', // Include cookies for authentication
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result: ApiResponse<LoanDetailsDB[]> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            return result.data || [];
+            const loanDetails = await storageService.getLoanDetails();
+            return loanDetails;
         } catch (error) {
             console.error('[LoanDetailsService] Error fetching loan details:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Fetch a specific loan by loan number
-     */
-    async fetchLoanByNumber(loanNumber: string): Promise<LoanDetailsDB | null> {
-        try {
-            const response = await fetch(`${this.baseUrl}?loan_number=${encodeURIComponent(loanNumber)}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result: ApiResponse<LoanDetailsDB[]> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            return result.data && result.data.length > 0 ? result.data[0] : null;
-        } catch (error) {
-            console.error('[LoanDetailsService] Error fetching loan by number:', error);
             throw error;
         }
     }
@@ -73,21 +33,8 @@ class LoanDetailsService {
      */
     async fetchLoanById(id: string): Promise<LoanDetailsDB | null> {
         try {
-            const response = await fetch(`${this.baseUrl}?id=${encodeURIComponent(id)}`, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result: ApiResponse<LoanDetailsDB[]> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            return result.data && result.data.length > 0 ? result.data[0] : null;
+            const loanDetails = await storageService.getLoanDetails(id);
+            return loanDetails;
         } catch (error) {
             console.error('[LoanDetailsService] Error fetching loan by ID:', error);
             throw error;
@@ -97,33 +44,17 @@ class LoanDetailsService {
     /**
      * Create or update loan details
      */
-    async saveLoanDetails(loanData: CreateLoanDetailsRequest): Promise<{
+    async saveLoanDetails(loanData: CreateLoanDetailsRequest & { id?: string }): Promise<{
         data: LoanDetailsDB;
         isUpdate: boolean;
     }> {
         try {
-            const response = await fetch(this.baseUrl, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loanData),
-            });
-
-            const result: ApiResponse<LoanDetailsDB> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
-
-            if (!result.data) {
-                throw new Error('No data returned from server');
-            }
+            const isUpdate = !!loanData.id;
+            const saved = await storageService.saveLoanDetails(loanData);
 
             return {
-                data: result.data,
-                isUpdate: result.isUpdate || false,
+                data: saved,
+                isUpdate,
             };
         } catch (error) {
             console.error('[LoanDetailsService] Error saving loan details:', error);
@@ -136,19 +67,7 @@ class LoanDetailsService {
      */
     async deleteLoanDetails(id: string): Promise<void> {
         try {
-            const response = await fetch(`${this.baseUrl}?id=${encodeURIComponent(id)}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const result: ApiResponse<void> = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || `HTTP error! status: ${response.status}`);
-            }
+            await storageService.deleteLoanDetails(id);
         } catch (error) {
             console.error('[LoanDetailsService] Error deleting loan details:', error);
             throw error;

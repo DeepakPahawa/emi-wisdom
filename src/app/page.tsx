@@ -13,9 +13,14 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { UserProfile } from "@/components/UserProfile"
+import { useStorageSync } from "@/hooks/useStorageSync"
+import { StorageIndicator } from "@/components/StorageIndicator"
 
 export default function Home() {
   const { recalculate } = useEmiStore();
+
+  // Initialize storage sync (handles IndexedDB <-> Supabase sync)
+  useStorageSync();
 
   // Initialize the store on mount
   useEffect(() => {
@@ -42,6 +47,7 @@ export default function Home() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+              <StorageIndicator />
               <ModeToggle />
               <UserProfile />
             </div>

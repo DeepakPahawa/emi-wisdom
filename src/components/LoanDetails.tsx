@@ -50,8 +50,8 @@ export function LoanDetails() {
 
     // Fetch loan details on mount using the store
     useEffect(() => {
-        fetchLoanDetails(!!user);
-    }, [fetchLoanDetails, user]);
+        fetchLoanDetails();
+    }, [fetchLoanDetails]);
 
     // Update form fields when currentLoan changes in the store
     useEffect(() => {
@@ -69,12 +69,6 @@ export function LoanDetails() {
     }, [loanDetails.startDate]);
 
     const handleSave = async () => {
-        // Check if user is authenticated before saving to Supabase
-        if (!user) {
-            setShowLoginDialog(true);
-            return;
-        }
-
         // Validate principal amount and interest rate from the store
         if (loanDetails.principal <= 0) {
             toast({
@@ -97,8 +91,9 @@ export function LoanDetails() {
         // Generate a default loan number if not provided
         const finalLoanNumber = loanLabelText.trim() || `LOAN-${Date.now()}`;
 
-        // Use the store action to save loan details
+        // Use the store action to save loan details (StorageService handles auth automatically)
         const success = await saveLoanDetails({
+            id: currentLoan?.id,
             loan_number: finalLoanNumber,
             principal_amount: loanDetails.principal,
             original_interest_rate: currentLoan?.original_interest_rate || loanDetails.rate,
@@ -107,7 +102,7 @@ export function LoanDetails() {
             loan_tenure_months: loanDetails.durationMonths,
             bank_name: bankName.trim() || 'Not Specified',
             loan_label: loanLabel,
-        }, !!user);
+        });
 
         if (success) {
             setIsEditMode(false);

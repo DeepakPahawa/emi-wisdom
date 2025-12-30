@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { LoanDetailsDB } from '@/types';
-import { loanDetailsService, localStorageService } from '@/services';
+import { LoanDetailsDB, StorageBackend } from '@/types';
+import { loanDetailsService } from '@/services';
+import { storageService } from '@/services/StorageService';
 
 interface LoanDetailsStore {
     // Current loan details from database
@@ -17,8 +18,12 @@ interface LoanDetailsStore {
     // Error state
     error: string | null;
 
-    // Storage mode
-    isUsingLocalStorage: boolean;
+    // Storage backend
+    storageBackend: StorageBackend;
+
+    // Sync state
+    isSyncing: boolean;
+    lastSyncedAt: string | null;
 
     // Actions
     setCurrentLoan: (loan: LoanDetailsDB | null) => void;
@@ -26,12 +31,15 @@ interface LoanDetailsStore {
     setIsLoading: (loading: boolean) => void;
     setIsSaving: (saving: boolean) => void;
     setError: (error: string | null) => void;
-    setIsUsingLocalStorage: (isLocal: boolean) => void;
+    setStorageBackend: (backend: StorageBackend) => void;
+    setIsSyncing: (syncing: boolean) => void;
+    setLastSyncedAt: (timestamp: string | null) => void;
 
-    // API actions
-    fetchLoanDetails: (isAuthenticated: boolean) => Promise<void>;
-    saveLoanDetails: (loan: Omit<LoanDetailsDB, 'id' | 'created_at' | 'updated_at'>, isAuthenticated: boolean) => Promise<boolean>;
+    // API actions (no longer need isAuthenticated param - handled by StorageService)
+    fetchLoanDetails: () => Promise<void>;
+    saveLoanDetails: (loan: Omit<LoanDetailsDB, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => Promise<boolean>;
     clearCurrentLoan: () => void;
+    syncToSupabase: () => Promise<void>;
 }
 
 export const useLoanDetailsStore = create<LoanDetailsStore>()(
@@ -42,7 +50,9 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
             isLoading: false,
             isSaving: false,
             error: null,
-            isUsingLocalStorage: false,
+            storageBackend: 'indexeddb',
+            isSyncing: false,
+            lastSyncedAt: null,
 
             setCurrentLoan: (loan) => set({ currentLoan: loan }),
 
@@ -54,46 +64,34 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
 
             setError: (error) => set({ error }),
 
-            setIsUsingLocalStorage: (isLocal) => set({ isUsingLocalStorage: isLocal }),
+            setStorageBackend: (backend) => set({ storageBackend: backend }),
+
+            setIsSyncing: (syncing) => set({ isSyncing: syncing }),
+
+            setLastSyncedAt: (timestamp) => set({ lastSyncedAt: timestamp }),
 
             clearCurrentLoan: () => set({ currentLoan: null }),
 
-            fetchLoanDetails: async (isAuthenticated: boolean) => {
+            fetchLoanDetails: async () => {
                 set({ isLoading: true, error: null });
 
                 try {
-                    if (isAuthenticated) {
-                        // Use Supabase API via service
-                        set({ isUsingLocalStorage: false });
-                        console.log('[LoanDetailsStore] Fetching loan details from API, isAuthenticated:', isAuthenticated);
+                    // Detect and set current backend
+                    const backend = await storageService.getBackend();
+                    set({ storageBackend: backend });
 
-                        const loans = await loanDetailsService.fetchLoanDetails();
+                    console.log('[LoanDetailsStore] Fetching loan details, backend:', backend);
 
-                        console.log('[LoanDetailsStore] API response:', {
-                            hasData: !!loans,
-                            dataLength: loans?.length,
-                        });
+                    const loan = await loanDetailsService.fetchLoanDetails();
 
-                        if (loans && loans.length > 0) {
-                            // Set all loans
-                            set({ loans });
+                    console.log('[LoanDetailsStore] Fetched loan:', {
+                        hasData: !!loan,
+                    });
 
-                            // Set the most recent loan as current
-                            set({ currentLoan: loans[0] });
-                        } else {
-                            set({ loans: [], currentLoan: null });
-                        }
+                    if (loan) {
+                        set({ currentLoan: loan, loans: [loan] });
                     } else {
-                        // Use LocalStorage - no API call needed
-                        set({ isUsingLocalStorage: true });
-                        const loans = await localStorageService.getLoanDetails();
-
-                        if (loans.length > 0) {
-                            set({ loans });
-                            set({ currentLoan: loans[0] });
-                        } else {
-                            set({ loans: [], currentLoan: null });
-                        }
+                        set({ loans: [], currentLoan: null });
                     }
                 } catch (error) {
                     console.error('Error fetching loan details:', error);
@@ -107,35 +105,25 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                 }
             },
 
-            saveLoanDetails: async (loanData, isAuthenticated: boolean) => {
+            saveLoanDetails: async (loanData) => {
                 set({ isSaving: true, error: null });
 
                 try {
-                    if (isAuthenticated) {
-                        // Use Supabase API via service
-                        set({ isUsingLocalStorage: false });
-                        const result = await loanDetailsService.saveLoanDetails(loanData);
+                    // Detect and set current backend
+                    const backend = await storageService.getBackend();
+                    set({ storageBackend: backend });
 
-                        // Update current loan with the saved data
-                        set({ currentLoan: result.data });
+                    console.log('[LoanDetailsStore] Saving loan details, backend:', backend);
 
-                        // Refresh the loans list
-                        await get().fetchLoanDetails(isAuthenticated);
+                    const result = await loanDetailsService.saveLoanDetails(loanData);
 
-                        return true;
-                    } else {
-                        // Use LocalStorage
-                        set({ isUsingLocalStorage: true });
-                        const savedLoan = await localStorageService.saveLoanDetails(loanData);
+                    // Update current loan with the saved data
+                    set({ currentLoan: result.data });
 
-                        // Update current loan with the saved data
-                        set({ currentLoan: savedLoan });
+                    // Refresh the loans list
+                    await get().fetchLoanDetails();
 
-                        // Refresh the loans list
-                        await get().fetchLoanDetails(isAuthenticated);
-
-                        return true;
-                    }
+                    return true;
                 } catch (error) {
                     console.error('Error saving loan details:', error);
                     set({
@@ -144,6 +132,30 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                     return false;
                 } finally {
                     set({ isSaving: false });
+                }
+            },
+
+            syncToSupabase: async () => {
+                set({ isSyncing: true, error: null });
+
+                try {
+                    const result = await storageService.syncToSupabase();
+
+                    if (result.success) {
+                        set({ lastSyncedAt: new Date().toISOString() });
+
+                        // Refresh loan details after sync
+                        await get().fetchLoanDetails();
+                    } else {
+                        set({ error: result.errors.join(', ') });
+                    }
+                } catch (error) {
+                    console.error('Error syncing to Supabase:', error);
+                    set({
+                        error: error instanceof Error ? error.message : 'Failed to sync to Supabase'
+                    });
+                } finally {
+                    set({ isSyncing: false });
                 }
             },
         }),

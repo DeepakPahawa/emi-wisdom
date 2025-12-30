@@ -70,7 +70,7 @@ export function LoanConfiguration() {
     const handleReset = async () => {
         try {
             // Fetch the latest loan details from the database or local storage
-            await fetchLoanDetails(true);
+            await fetchLoanDetails();
 
             // If we have a loan in the database/storage, use those values
             if (currentLoan) {
@@ -88,7 +88,7 @@ export function LoanConfiguration() {
 
                 toast({
                     title: "✅ Reset Complete",
-                    description: "Loan details reloaded from database",
+                    description: "Loan details reloaded from storage",
                 });
             } else {
                 // If no loan exists in database, use default values
