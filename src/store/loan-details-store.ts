@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LoanDetailsDB } from '@/types';
-import { localStorageService } from '@/services/LocalStorageService';
+import { loanDetailsService, localStorageService } from '@/services';
 
 interface LoanDetailsStore {
     // Current loan details from database
@@ -63,29 +63,23 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
 
                 try {
                     if (isAuthenticated) {
-                        // Use Supabase API
+                        // Use Supabase API via service
                         set({ isUsingLocalStorage: false });
                         console.log('[LoanDetailsStore] Fetching loan details from API, isAuthenticated:', isAuthenticated);
 
-                        const response = await fetch('/api/loan-details', {
-                            credentials: 'include', // Include cookies for authentication
-                        });
-                        const result = await response.json();
+                        const loans = await loanDetailsService.fetchLoanDetails();
 
                         console.log('[LoanDetailsStore] API response:', {
-                            status: response.status,
-                            ok: response.ok,
-                            hasData: !!result.data,
-                            dataLength: result.data?.length,
-                            error: result.error
+                            hasData: !!loans,
+                            dataLength: loans?.length,
                         });
 
-                        if (response.ok && result.data && result.data.length > 0) {
+                        if (loans && loans.length > 0) {
                             // Set all loans
-                            set({ loans: result.data });
+                            set({ loans });
 
                             // Set the most recent loan as current
-                            set({ currentLoan: result.data[0] });
+                            set({ currentLoan: loans[0] });
                         } else {
                             set({ loans: [], currentLoan: null });
                         }
@@ -118,31 +112,17 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
 
                 try {
                     if (isAuthenticated) {
-                        // Use Supabase API
+                        // Use Supabase API via service
                         set({ isUsingLocalStorage: false });
-                        const response = await fetch('/api/loan-details', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            credentials: 'include', // Include cookies for authentication
-                            body: JSON.stringify(loanData),
-                        });
+                        const result = await loanDetailsService.saveLoanDetails(loanData);
 
-                        const result = await response.json();
+                        // Update current loan with the saved data
+                        set({ currentLoan: result.data });
 
-                        if (response.ok) {
-                            // Update current loan with the saved data
-                            set({ currentLoan: result.data });
+                        // Refresh the loans list
+                        await get().fetchLoanDetails(isAuthenticated);
 
-                            // Refresh the loans list
-                            await get().fetchLoanDetails(isAuthenticated);
-
-                            return true;
-                        } else {
-                            set({ error: result.error || 'Failed to save loan details' });
-                            return false;
-                        }
+                        return true;
                     } else {
                         // Use LocalStorage
                         set({ isUsingLocalStorage: true });

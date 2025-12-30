@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLoanDetailsStore } from '@/store/loan-details-store';
 import { useEmiTransactionsStore } from '@/store/emi-transactions-store';
 import { useAuth } from '@/contexts/AuthContext';
-import { localStorageService } from '@/services/LocalStorageService';
+import { emiTransactionsService, localStorageService } from '@/services';
 import { ArrowLeftRight, Edit2, Trash2, Loader2, ArrowDownUp } from 'lucide-react';
 
 export function AmortizationTable() {
@@ -128,20 +128,8 @@ export function AmortizationTable() {
             };
 
             if (user) {
-                // Use Supabase API
-                const response = await fetch('/api/emi-transactions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(transactionData),
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to save transaction');
-                }
+                // Use Supabase API via service
+                const result = await emiTransactionsService.saveTransaction(transactionData);
 
                 const actionText = result.isUpdate ? 'Updated' : 'Saved';
                 const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
@@ -205,16 +193,8 @@ export function AmortizationTable() {
             }
 
             if (user) {
-                // Use Supabase API
-                const response = await fetch(`/api/emi-transactions?id=${transactionToDelete.id}`, {
-                    method: 'DELETE',
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to delete transaction');
-                }
+                // Use Supabase API via service
+                await emiTransactionsService.deleteTransaction(transactionToDelete.id);
 
                 const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
                 toast({
@@ -314,6 +294,9 @@ export function AmortizationTable() {
                 setSyncingPartPaymentMonths(monthNumbers);
             }
 
+            // Get loan ID (we know it exists from the check above)
+            const loanId = currentLoan.id;
+
             // Prepare batch transactions
             const transactions = monthsToSync.map(point => {
                 // For both EMI and Part Payment: use scheduled EMI amount
@@ -329,7 +312,7 @@ export function AmortizationTable() {
                     : point.interestComponent;
 
                 return {
-                    loan_id: currentLoan.id,
+                    loan_id: loanId,
                     emi_date: point.date.toISOString().split('T')[0],
                     month_number: point.month,
                     transaction_type: transactionType,
@@ -339,20 +322,8 @@ export function AmortizationTable() {
                 };
             });
 
-            // Call batch API endpoint
-            const response = await fetch('/api/emi-transactions', {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ transactions }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to sync transactions');
-            }
+            // Call batch API endpoint via service
+            const result = await emiTransactionsService.batchSaveTransactions(transactions);
 
             // Update local state for all synced months
             monthsToSync.forEach(point => {
@@ -419,19 +390,12 @@ export function AmortizationTable() {
                 setSyncingPartPaymentMonths(monthNumbers);
             }
 
-            // Call batch delete API endpoint
-            const response = await fetch(
-                `/api/emi-transactions?loan_id=${currentLoan.id}&transaction_type=${transactionType}&from_month=${month}`,
-                {
-                    method: 'DELETE',
-                }
+            // Call batch delete API endpoint via service
+            const deletedCount = await emiTransactionsService.deleteTransactionsFromMonth(
+                currentLoan.id,
+                transactionType,
+                month
             );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to delete transactions');
-            }
 
             // Update local state for all deleted months
             monthsToDelete.forEach(point => {
@@ -530,20 +494,8 @@ export function AmortizationTable() {
                 interest_component: 0, // 0% to interest
             };
 
-            // Save using the single transaction endpoint (POST)
-            const response = await fetch('/api/emi-transactions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(transactionData),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to copy Part Payment');
-            }
+            // Save using the single transaction endpoint via service
+            const result = await emiTransactionsService.saveTransaction(transactionData);
 
             // Update local state
             updatePartPayment(month, previousAmount);
@@ -589,16 +541,8 @@ export function AmortizationTable() {
             );
 
             if (transactionToDelete?.id) {
-                // Delete from database
-                const response = await fetch(`/api/emi-transactions?id=${transactionToDelete.id}`, {
-                    method: 'DELETE',
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Failed to delete Part Payment');
-                }
+                // Delete from database via service
+                await emiTransactionsService.deleteTransaction(transactionToDelete.id);
             }
 
             // Update local state
