@@ -17,9 +17,17 @@ interface DatePickerProps {
     date: Date | undefined
     onDateChange: (date: Date | undefined) => void
     placeholder?: string
+    fromYear?: number
+    toYear?: number
 }
 
-export function DatePicker({ date, onDateChange, placeholder = "Pick a date" }: DatePickerProps) {
+export function DatePicker({
+    date,
+    onDateChange,
+    placeholder = "Pick a date",
+    fromYear = 1970,
+    toYear = 2050
+}: DatePickerProps) {
     return (
         <Popover>
             <PopoverTrigger asChild>
@@ -39,6 +47,9 @@ export function DatePicker({ date, onDateChange, placeholder = "Pick a date" }: 
                     mode="single"
                     selected={date}
                     onSelect={onDateChange}
+                    captionLayout="dropdown"
+                    fromYear={fromYear}
+                    toYear={toYear}
                     initialFocus
                 />
             </PopoverContent>

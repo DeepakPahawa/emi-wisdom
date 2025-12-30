@@ -1,7 +1,8 @@
 
 "use client"
 
-import { InputForm } from "@/components/InputForm"
+import { LoanConfiguration } from "@/components/LoanConfiguration"
+import { LoanDetails } from "@/components/LoanDetails"
 import { LoanSummary } from "@/components/LoanSummary"
 import { AmortizationTable } from "@/components/AmortizationTable"
 import { PAvsInterestCharts } from "@/components/PAvsInterestCharts"
@@ -50,7 +51,8 @@ export default function Home() {
 
             {/* Left Column: Loan Configuration + Loan Summary + Loan Details (4 cols) */}
             <div className="lg:col-span-4 space-y-6">
-              <InputForm />
+              <LoanConfiguration />
+              <LoanDetails />
             </div>
 
             {/* Right Column: Amortization Table + Charts (8 cols) */}

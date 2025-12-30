@@ -498,6 +498,7 @@ export function AmortizationTable() {
 
             // Look backwards for the last filled Part Payment
             let previousAmount = 0;
+            let isHalfEmi = false;
             for (let i = currentMonthIndex - 1; i >= 0; i--) {
                 const partPayment = schedule[i]?.partPayment;
                 if (partPayment && partPayment > 0) {
@@ -506,14 +507,10 @@ export function AmortizationTable() {
                 }
             }
 
-            // If no previous Part Payment found, use 0 or show message
+            // If no previous Part Payment found, use half of EMI (rounded up)
             if (previousAmount === 0) {
-                toast({
-                    title: "ℹ️ No Previous Part Payment",
-                    description: "No previous Part Payment found to copy from",
-                    variant: "default",
-                });
-                return;
+                previousAmount = Math.ceil(calculationResult.emi / 2);
+                isHalfEmi = true;
             }
 
             // Set loading state for this month only
@@ -551,9 +548,12 @@ export function AmortizationTable() {
             // Update local state
             updatePartPayment(month, previousAmount);
 
+            // Show different toast message based on whether it's half EMI or copied from previous
             toast({
-                title: "✅ Part Payment Copied",
-                description: `Copied ₹${previousAmount.toLocaleString('en-IN')} to this month`,
+                title: "✅ Part Payment Added",
+                description: isHalfEmi
+                    ? `Added ₹${previousAmount.toLocaleString('en-IN')} (half of EMI). Click to edit if needed.`
+                    : `Added ₹${previousAmount.toLocaleString('en-IN')} to this month. Click to edit if needed.`,
             });
 
             // Refresh transactions from database
