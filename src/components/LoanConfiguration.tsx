@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { useEmiStore } from "@/store/emi-store";
+import { useLoanConfigStore } from "@/store/loan-config-store";
 import { saveLoanConfig } from "@/lib/indexeddb-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ export function LoanConfiguration() {
         setInterest,
         setTenure,
         loadFromStorage,
-    } = useEmiStore();
+    } = useLoanConfigStore();
 
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 

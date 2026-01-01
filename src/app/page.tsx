@@ -2,14 +2,14 @@
 "use client"
 
 import { LoanConfiguration } from "@/components/LoanConfiguration"
-import { useEmiStore } from "@/store/emi-store"
+import { useLoanConfigStore } from "@/store/loan-config-store"
 import { useEffect } from "react"
 import { MonitorPlay } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
 
 export default function Home() {
-  const { loadFromStorage } = useEmiStore();
+  const { loadFromStorage } = useLoanConfigStore();
 
   // Initialize the store on mount
   useEffect(() => {

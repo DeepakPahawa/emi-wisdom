@@ -7,7 +7,7 @@ const DEFAULT_PRINCIPAL = 1000000; // ₹10 lakhs
 const DEFAULT_INTEREST = 8.5; // 8.5%
 const DEFAULT_TENURE = 240; // 20 years (240 months)
 
-export const useEmiStore = create<LoanConfigStore>((set) => ({
+export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
     // State
     principal: DEFAULT_PRINCIPAL,
     interest: DEFAULT_INTEREST,
@@ -16,15 +16,15 @@ export const useEmiStore = create<LoanConfigStore>((set) => ({
 
     // Actions
     setPrincipal: (principal: number) => {
-        set({ principal });
+        set({ principal, isInitialized: true });
     },
 
     setInterest: (interest: number) => {
-        set({ interest });
+        set({ interest, isInitialized: true });
     },
 
     setTenure: (tenure: number) => {
-        set({ tenure });
+        set({ tenure, isInitialized: true });
     },
 
     setInitialized: (initialized: boolean) => {
