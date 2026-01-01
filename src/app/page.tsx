@@ -4,6 +4,7 @@
 import { LoanConfiguration } from "@/components/LoanConfiguration"
 import { LoanDetails } from "@/components/LoanDetails"
 import { LoanSummary } from "@/components/LoanSummary"
+import { LoanOverviewCard } from "@/components/LoanOverviewCard"
 import { AmortizationTable } from "@/components/AmortizationTable"
 import { PAvsInterestCharts } from "@/components/PAvsInterestCharts"
 import { useEmiStore } from "@/store/emi-store"
@@ -65,6 +66,7 @@ export default function Home() {
 
             {/* Right Column: Amortization Table + Charts (8 cols) */}
             <div className="lg:col-span-8 space-y-8">
+              <LoanOverviewCard />
               <AmortizationTable />
               <PAvsInterestCharts />
             </div>
