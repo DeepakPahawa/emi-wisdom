@@ -2,6 +2,8 @@
 "use client"
 
 import { LoanConfiguration } from "@/components/LoanConfiguration"
+import { LoanOverview } from "@/components/LoanOverview"
+import { AmortizationSchedule } from "@/components/AmortizationSchedule"
 import { useLoanConfigStore } from "@/store/loan-config-store"
 import { useEffect } from "react"
 import { MonitorPlay } from "lucide-react"
@@ -46,11 +48,10 @@ export default function Home() {
             <LoanConfiguration />
           </div>
 
-          {/* Right Column: Placeholder for future components (8 cols) */}
+          {/* Right Column: Loan Overview and Amortization Schedule (8 cols) */}
           <div className="lg:col-span-8 space-y-8">
-            <div className="p-8 border-2 border-dashed rounded-lg text-center text-muted-foreground">
-              <p className="text-lg">Loan Overview, Summary, and Charts will appear here</p>
-            </div>
+            <LoanOverview />
+            <AmortizationSchedule />
           </div>
 
         </div>
