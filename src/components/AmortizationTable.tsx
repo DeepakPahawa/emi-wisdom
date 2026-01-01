@@ -10,7 +10,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreateEmiTransactionRequest } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -69,17 +69,41 @@ export function AmortizationTable() {
         }
     }, [currentLoan?.id, fetchTransactionsByLoanId, user]);
 
+    // Track which months had transactions in the previous render
+    const prevTransactionMonthsRef = useRef<Set<number>>(new Set());
+
     // Load transactions into the schedule when they're fetched
     useEffect(() => {
-        if (transactions.length > 0) {
-            transactions.forEach((transaction) => {
-                if (transaction.transaction_type === 'emi') {
-                    updatePaidEmi(transaction.month_number, transaction.amount_paid);
-                } else if (transaction.transaction_type === 'part_payment') {
-                    updatePartPayment(transaction.month_number, transaction.amount_paid);
+        const currentTransactionMonths = new Set<number>();
+
+        // Build set of current transaction months
+        transactions.forEach((transaction) => {
+            currentTransactionMonths.add(transaction.month_number);
+        });
+
+        // Clear months that had transactions before but don't anymore
+        prevTransactionMonthsRef.current.forEach((month: number) => {
+            if (!currentTransactionMonths.has(month)) {
+                // This month had a transaction before but doesn't now (was deleted)
+                const transaction = transactions.find(t => t.month_number === month);
+                if (!transaction) {
+                    updatePaidEmi(month, 0);
+                    updatePartPayment(month, 0);
                 }
-            });
-        }
+            }
+        });
+
+        // Load the current transactions
+        transactions.forEach((transaction) => {
+            if (transaction.transaction_type === 'emi') {
+                updatePaidEmi(transaction.month_number, transaction.amount_paid);
+            } else if (transaction.transaction_type === 'part_payment') {
+                updatePartPayment(transaction.month_number, transaction.amount_paid);
+            }
+        });
+
+        // Update the ref for next render
+        prevTransactionMonthsRef.current = currentTransactionMonths;
     }, [transactions, updatePaidEmi, updatePartPayment]);
 
     const handleCellClick = (month: number, field: 'paidEmi' | 'partPayment') => {
@@ -311,15 +335,6 @@ export function AmortizationTable() {
             // Call batch API endpoint via service
             const result = await batchSaveTransactions(loanId, transactionsToSave);
 
-            // Update local state for all synced months
-            monthsToSync.forEach(point => {
-                if (transactionType === 'emi') {
-                    updatePaidEmi(point.month, calculationResult.emi);
-                } else {
-                    updatePartPayment(point.month, calculationResult.emi);
-                }
-            });
-
             // Get the month name for the toast
             const clickedPoint = schedule.find(p => p.month === month);
             const monthName = clickedPoint ? new Intl.DateTimeFormat('en-IN', {
@@ -393,15 +408,6 @@ export function AmortizationTable() {
                 month
             );
 
-            // Update local state for all deleted months
-            monthsToDelete.forEach(point => {
-                if (transactionType === 'emi') {
-                    updatePaidEmi(point.month, 0);
-                } else {
-                    updatePartPayment(point.month, 0);
-                }
-            });
-
             // Get the month name for the toast
             const clickedPoint = schedule.find(p => p.month === month);
             const monthName = clickedPoint ? new Intl.DateTimeFormat('en-IN', {
@@ -458,7 +464,7 @@ export function AmortizationTable() {
 
             // Look backwards for the last filled Part Payment
             let previousAmount = 0;
-            let isHalfEmi = false;
+            let isFullEmi = false;
             for (let i = currentMonthIndex - 1; i >= 0; i--) {
                 const partPayment = schedule[i]?.partPayment;
                 if (partPayment && partPayment > 0) {
@@ -467,10 +473,10 @@ export function AmortizationTable() {
                 }
             }
 
-            // If no previous Part Payment found, use half of EMI (rounded up)
+            // If no previous Part Payment found, use full EMI amount
             if (previousAmount === 0) {
-                previousAmount = Math.ceil(calculationResult.emi / 2);
-                isHalfEmi = true;
+                previousAmount = calculationResult.emi;
+                isFullEmi = true;
             }
 
             // Set loading state for this month only
@@ -496,11 +502,11 @@ export function AmortizationTable() {
             // Update local state
             updatePartPayment(month, previousAmount);
 
-            // Show different toast message based on whether it's half EMI or copied from previous
+            // Show different toast message based on whether it's full EMI or copied from previous
             toast({
                 title: "✅ Part Payment Added",
-                description: isHalfEmi
-                    ? `Added ₹${previousAmount.toLocaleString('en-IN')} (half of EMI). Click to edit if needed.`
+                description: isFullEmi
+                    ? `Added ₹${previousAmount.toLocaleString('en-IN')} (full EMI amount). Click to edit if needed.`
                     : `Added ₹${previousAmount.toLocaleString('en-IN')} to this month. Click to edit if needed.`,
             });
 
@@ -537,12 +543,9 @@ export function AmortizationTable() {
             );
 
             if (transactionToDelete?.id) {
-                // Delete from database via service
-                await emiTransactionsService.deleteTransaction(transactionToDelete.id);
+                // Delete from database via store
+                await deleteTransactionFromStore(transactionToDelete.id);
             }
-
-            // Update local state
-            updatePartPayment(month, 0);
 
             toast({
                 title: "🗑️ Part Payment Deleted",
@@ -655,29 +658,33 @@ export function AmortizationTable() {
                                             ) : (
                                                 <div className="relative inline-flex items-center justify-end min-w-[100px]">
                                                     {/* Value display - hidden on hover */}
-                                                    <span className={`text-foreground transition-opacity duration-200 ${hoveredCell === point.month ? 'opacity-0' : 'opacity-100'}`}>
+                                                    <span className={`text-foreground transition-opacity duration-100 ${hoveredCell === point.month ? 'opacity-0' : 'opacity-100'}`}>
                                                         {point.paidEmi ? formatCurrency(point.paidEmi) : '-'}
                                                     </span>
 
                                                     {/* Icons overlay - shown on hover */}
                                                     {hoveredCell === point.month && (
-                                                        <div className="absolute inset-0 flex items-center justify-end gap-1 animate-in fade-in zoom-in-95 duration-200">
-                                                            {/* Sync Icon */}
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCopyScheduledEmi(point.month);
-                                                                }}
-                                                                className="p-1.5 rounded-md hover:bg-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-all hover:scale-110"
-                                                                title="Sync from Scheduled EMI"
-                                                            >
-                                                                <ArrowLeftRight className="h-4 w-4" />
-                                                            </button>
+                                                        <div className="absolute inset-0 flex items-center justify-end gap-1 animate-in fade-in duration-75">
+                                                            {/* Show Sync Icon only if no value */}
+                                                            {(!point.paidEmi || point.paidEmi === 0) && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setHoveredCell(null);
+                                                                        handleCopyScheduledEmi(point.month);
+                                                                    }}
+                                                                    className="p-1.5 rounded-md hover:bg-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-all hover:scale-110"
+                                                                    title="Sync from Scheduled EMI"
+                                                                >
+                                                                    <ArrowLeftRight className="h-4 w-4" />
+                                                                </button>
+                                                            )}
 
-                                                            {/* Edit Icon */}
+                                                            {/* Edit Icon - always show */}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    setHoveredCell(null);
                                                                     handleCellClick(point.month, 'paidEmi');
                                                                 }}
                                                                 className="p-1.5 rounded-md hover:bg-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all hover:scale-110"
@@ -686,17 +693,20 @@ export function AmortizationTable() {
                                                                 <Edit2 className="h-4 w-4" />
                                                             </button>
 
-                                                            {/* Delete Icon */}
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeletePaidEmi(point.month);
-                                                                }}
-                                                                className="p-1.5 rounded-md hover:bg-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 transition-all hover:scale-110"
-                                                                title="Delete Paid EMI"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
+                                                            {/* Show Delete Icon only if value exists */}
+                                                            {point.paidEmi && point.paidEmi > 0 && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setHoveredCell(null);
+                                                                        handleDeletePaidEmi(point.month);
+                                                                    }}
+                                                                    className="p-1.5 rounded-md hover:bg-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 transition-all hover:scale-110"
+                                                                    title="Delete Paid EMI"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -735,29 +745,33 @@ export function AmortizationTable() {
                                             ) : (
                                                 <div className="relative inline-flex items-center justify-end min-w-[100px]">
                                                     {/* Value display - hidden on hover */}
-                                                    <span className={`transition-opacity duration-200 ${hoveredPartPaymentCell === point.month ? 'opacity-0' : 'opacity-100'} ${hasPartPayment ? 'text-blue-500 font-semibold' : 'text-foreground'}`}>
+                                                    <span className={`transition-opacity duration-100 ${hoveredPartPaymentCell === point.month ? 'opacity-0' : 'opacity-100'} ${hasPartPayment ? 'text-blue-500 font-semibold' : 'text-foreground'}`}>
                                                         {point.partPayment ? formatCurrency(point.partPayment) : '-'}
                                                     </span>
 
                                                     {/* Icons overlay - shown on hover */}
                                                     {hoveredPartPaymentCell === point.month && (
-                                                        <div className="absolute inset-0 flex items-center justify-end gap-1 animate-in fade-in zoom-in-95 duration-200">
-                                                            {/* Sync Icon */}
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleSyncPartPayment(point.month);
-                                                                }}
-                                                                className="p-1.5 rounded-md hover:bg-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400 transition-all hover:scale-110"
-                                                                title="Copy from Previous Part Payment"
-                                                            >
-                                                                <ArrowDownUp className="h-4 w-4" />
-                                                            </button>
+                                                        <div className="absolute inset-0 flex items-center justify-end gap-1 animate-in fade-in duration-75">
+                                                            {/* Show Sync Icon only if no value */}
+                                                            {(!point.partPayment || point.partPayment === 0) && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setHoveredPartPaymentCell(null);
+                                                                        handleSyncPartPayment(point.month);
+                                                                    }}
+                                                                    className="p-1.5 rounded-md hover:bg-green-500/20 bg-green-500/10 text-green-600 dark:text-green-400 transition-all hover:scale-110"
+                                                                    title="Copy from Previous Part Payment"
+                                                                >
+                                                                    <ArrowDownUp className="h-4 w-4" />
+                                                                </button>
+                                                            )}
 
-                                                            {/* Edit Icon */}
+                                                            {/* Edit Icon - always show */}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    setHoveredPartPaymentCell(null);
                                                                     handleCellClick(point.month, 'partPayment');
                                                                 }}
                                                                 className="p-1.5 rounded-md hover:bg-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all hover:scale-110"
@@ -766,17 +780,20 @@ export function AmortizationTable() {
                                                                 <Edit2 className="h-4 w-4" />
                                                             </button>
 
-                                                            {/* Delete Icon */}
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeletePartPayment(point.month);
-                                                                }}
-                                                                className="p-1.5 rounded-md hover:bg-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 transition-all hover:scale-110"
-                                                                title="Delete Part Payments from this month onwards"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
+                                                            {/* Show Delete Icon only if value exists and is greater than 0 */}
+                                                            {point.partPayment && point.partPayment > 0 && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setHoveredPartPaymentCell(null);
+                                                                        handleDeletePartPayment(point.month);
+                                                                    }}
+                                                                    className="p-1.5 rounded-md hover:bg-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 transition-all hover:scale-110"
+                                                                    title="Delete Part Payment"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

@@ -89,7 +89,7 @@ const calculateSummary = (schedule: AmortizationPoint[], loanDetails: LoanDetail
 export const useEmiStore = create<EmiStore>((set, get) => ({
     loanDetails: {
         principal: 5000000,
-        rate: 9,
+        rate: 7.5,
         durationMonths: 240,
         startDate: new Date(),
     },

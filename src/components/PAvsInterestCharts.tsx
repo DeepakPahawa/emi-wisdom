@@ -164,6 +164,11 @@ export function PAvsInterestCharts() {
         return null;
     };
 
+    // Don't render charts if there's no data
+    if (actualPlanData.length === 0 || originalPlanData.length === 0) {
+        return null;
+    }
+
     return (
         <div className="w-full space-y-6">
             {/* Actual Plan Chart - Row 2 */}

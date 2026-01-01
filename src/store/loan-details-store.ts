@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { LoanDetailsDB, StorageBackend } from '@/types';
-import { loanDetailsService } from '@/services';
-import { storageService } from '@/services/StorageService';
+import { LoanDetailsDB, LoanDetails } from '@/types';
+import { indexedDBService } from '@/services/IndexedDBService';
 
 interface LoanDetailsStore {
-    // Current loan details from database
+    // Current loan details from IndexedDB (source of truth)
     currentLoan: LoanDetailsDB | null;
 
     // All loans (for future multi-loan support)
@@ -18,12 +17,8 @@ interface LoanDetailsStore {
     // Error state
     error: string | null;
 
-    // Storage backend
-    storageBackend: StorageBackend;
-
-    // Sync state
-    isSyncing: boolean;
-    lastSyncedAt: string | null;
+    // Derived getters
+    getLoanConfig: () => LoanDetails;
 
     // Actions
     setCurrentLoan: (loan: LoanDetailsDB | null) => void;
@@ -31,16 +26,23 @@ interface LoanDetailsStore {
     setIsLoading: (loading: boolean) => void;
     setIsSaving: (saving: boolean) => void;
     setError: (error: string | null) => void;
-    setStorageBackend: (backend: StorageBackend) => void;
-    setIsSyncing: (syncing: boolean) => void;
-    setLastSyncedAt: (timestamp: string | null) => void;
 
-    // API actions (no longer need isAuthenticated param - handled by StorageService)
+    // Update loan configuration (principal, rate, tenure)
+    updateLoanConfig: (config: { principal: number; rate: number; durationMonths: number }) => Promise<boolean>;
+
+    // IndexedDB actions
     fetchLoanDetails: () => Promise<void>;
     saveLoanDetails: (loan: Omit<LoanDetailsDB, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => Promise<boolean>;
     clearCurrentLoan: () => void;
-    syncToSupabase: () => Promise<void>;
 }
+
+// Default loan configuration
+const DEFAULT_LOAN_CONFIG: LoanDetails = {
+    principal: 5000000,
+    rate: 7.5,
+    durationMonths: 240,
+    startDate: new Date(),
+};
 
 export const useLoanDetailsStore = create<LoanDetailsStore>()(
     persist(
@@ -50,9 +52,22 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
             isLoading: false,
             isSaving: false,
             error: null,
-            storageBackend: 'indexeddb',
-            isSyncing: false,
-            lastSyncedAt: null,
+
+            // Derive LoanDetails from currentLoan or use defaults
+            getLoanConfig: () => {
+                const { currentLoan } = get();
+
+                if (currentLoan) {
+                    return {
+                        principal: currentLoan.principal_amount,
+                        rate: currentLoan.current_interest_rate,
+                        durationMonths: currentLoan.loan_tenure_months,
+                        startDate: new Date(currentLoan.emi_start_date),
+                    };
+                }
+
+                return DEFAULT_LOAN_CONFIG;
+            },
 
             setCurrentLoan: (loan) => set({ currentLoan: loan }),
 
@@ -64,25 +79,35 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
 
             setError: (error) => set({ error }),
 
-            setStorageBackend: (backend) => set({ storageBackend: backend }),
-
-            setIsSyncing: (syncing) => set({ isSyncing: syncing }),
-
-            setLastSyncedAt: (timestamp) => set({ lastSyncedAt: timestamp }),
-
             clearCurrentLoan: () => set({ currentLoan: null }),
+
+            // Update just the loan configuration (principal, rate, tenure)
+            updateLoanConfig: async (config) => {
+                const { currentLoan } = get();
+
+                const loanData = {
+                    id: currentLoan?.id,
+                    user_id: currentLoan?.user_id || null,
+                    loan_number: currentLoan?.loan_number || '',
+                    principal_amount: config.principal,
+                    original_interest_rate: currentLoan?.original_interest_rate || config.rate,
+                    current_interest_rate: config.rate,
+                    emi_start_date: currentLoan?.emi_start_date || new Date().toISOString().split('T')[0],
+                    loan_tenure_months: config.durationMonths,
+                    bank_name: currentLoan?.bank_name || '',
+                    loan_label: currentLoan?.loan_label || 'Other',
+                };
+
+                return get().saveLoanDetails(loanData);
+            },
 
             fetchLoanDetails: async () => {
                 set({ isLoading: true, error: null });
 
                 try {
-                    // Detect and set current backend
-                    const backend = await storageService.getBackend();
-                    set({ storageBackend: backend });
+                    console.log('[LoanDetailsStore] Fetching loan details from IndexedDB');
 
-                    console.log('[LoanDetailsStore] Fetching loan details, backend:', backend);
-
-                    const loan = await loanDetailsService.fetchLoanDetails();
+                    const loan = await indexedDBService.getLoanDetails();
 
                     console.log('[LoanDetailsStore] Fetched loan:', {
                         hasData: !!loan,
@@ -94,7 +119,7 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                         set({ loans: [], currentLoan: null });
                     }
                 } catch (error) {
-                    console.error('Error fetching loan details:', error);
+                    console.error('[LoanDetailsStore] Error fetching loan details:', error);
                     set({
                         error: error instanceof Error ? error.message : 'Failed to fetch loan details',
                         loans: [],
@@ -109,53 +134,36 @@ export const useLoanDetailsStore = create<LoanDetailsStore>()(
                 set({ isSaving: true, error: null });
 
                 try {
-                    // Detect and set current backend
-                    const backend = await storageService.getBackend();
-                    set({ storageBackend: backend });
+                    console.log('[LoanDetailsStore] Saving loan details to IndexedDB');
 
-                    console.log('[LoanDetailsStore] Saving loan details, backend:', backend);
-
-                    const result = await loanDetailsService.saveLoanDetails(loanData);
+                    // Save to IndexedDB
+                    const savedLoan = await indexedDBService.saveLoanDetails({
+                        id: loanData.id,
+                        user_id: loanData.user_id || null,
+                        loan_number: loanData.loan_number || '',
+                        principal_amount: loanData.principal_amount,
+                        original_interest_rate: loanData.original_interest_rate,
+                        current_interest_rate: loanData.current_interest_rate,
+                        emi_start_date: loanData.emi_start_date,
+                        loan_tenure_months: loanData.loan_tenure_months,
+                        bank_name: loanData.bank_name || '',
+                        loan_label: loanData.loan_label || 'Other',
+                    });
 
                     // Update current loan with the saved data
-                    set({ currentLoan: result.data });
+                    set({ currentLoan: savedLoan, loans: [savedLoan] });
 
-                    // Refresh the loans list
-                    await get().fetchLoanDetails();
+                    console.log('[LoanDetailsStore] Loan details saved successfully');
 
                     return true;
                 } catch (error) {
-                    console.error('Error saving loan details:', error);
+                    console.error('[LoanDetailsStore] Error saving loan details:', error);
                     set({
                         error: error instanceof Error ? error.message : 'Failed to save loan details'
                     });
                     return false;
                 } finally {
                     set({ isSaving: false });
-                }
-            },
-
-            syncToSupabase: async () => {
-                set({ isSyncing: true, error: null });
-
-                try {
-                    const result = await storageService.syncToSupabase();
-
-                    if (result.success) {
-                        set({ lastSyncedAt: new Date().toISOString() });
-
-                        // Refresh loan details after sync
-                        await get().fetchLoanDetails();
-                    } else {
-                        set({ error: result.errors.join(', ') });
-                    }
-                } catch (error) {
-                    console.error('Error syncing to Supabase:', error);
-                    set({
-                        error: error instanceof Error ? error.message : 'Failed to sync to Supabase'
-                    });
-                } finally {
-                    set({ isSyncing: false });
                 }
             },
         }),

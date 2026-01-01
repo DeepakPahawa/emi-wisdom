@@ -84,10 +84,10 @@ export interface LoanDetailsDB {
     principal_amount: number;
     original_interest_rate: number;
     current_interest_rate: number;
-    emi_start_date: string; // ISO date string
+    emi_start_date?: string; // ISO date string
     loan_tenure_months: number;
-    bank_name: string;
-    loan_label: LoanLabel;
+    bank_name?: string;
+    loan_label?: LoanLabel;
     created_at?: string;
     updated_at?: string;
 }

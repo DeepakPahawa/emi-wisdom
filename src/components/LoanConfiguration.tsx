@@ -6,7 +6,7 @@ import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { RotateCcw, IndianRupee, CirclePercent, Calendar } from "lucide-react"
 import { useEmiStore } from "@/store/emi-store"
 import { useLoanDetailsStore } from "@/store/loan-details-store"
@@ -18,34 +18,163 @@ export function LoanConfiguration() {
     const {
         currentLoan,
         isLoading: storeLoading,
-        fetchLoanDetails
+        fetchLoanDetails,
+        saveLoanDetails
     } = useLoanDetailsStore();
     const { toast } = useToast();
 
+    // Local state derives from store
     const [amount, setAmount] = useState<number | string>(loanDetails.principal)
     const [rate, setRate] = useState<number | string>(loanDetails.rate)
     const [years, setYears] = useState(loanDetails.durationMonths / 12)
+    const [isInitialized, setIsInitialized] = useState(false);
 
-    // Update form fields when currentLoan changes in the store
+    // Refs to manage state updates
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const hasLoadedRef = useRef(false);
+    const isUserInputRef = useRef(false);
+
+    // Load saved loan details from IndexedDB on mount
     useEffect(() => {
-        if (currentLoan) {
-            setAmount(currentLoan.principal_amount);
-            setRate(currentLoan.current_interest_rate);
-            setYears(currentLoan.loan_tenure_months / 12);
+        if (hasLoadedRef.current) {
+            console.log('[LoanConfiguration] Already loaded, skipping');
+            return;
         }
-    }, [currentLoan]);
 
+        console.log('[LoanConfiguration] Starting initialization...');
+        hasLoadedRef.current = true;
+
+        // Set initialized immediately - don't wait for fetch
+        setIsInitialized(true);
+        console.log('[LoanConfiguration] Set isInitialized to true');
+
+        // Fetch loan details in background
+        fetchLoanDetails().then(() => {
+            console.log('[LoanConfiguration] fetchLoanDetails() completed');
+        }).catch((error) => {
+            console.error('[LoanConfiguration] Error loading saved loan details:', error);
+        });
+    }, []); // Run only once on mount
+
+    // Update store when currentLoan is fetched from IndexedDB (only if values changed)
     useEffect(() => {
+        if (!hasLoadedRef.current || !isInitialized) return;
+
+        if (currentLoan) {
+            // Only update if values are different to prevent infinite loop
+            const valuesChanged =
+                loanDetails.principal !== currentLoan.principal_amount ||
+                loanDetails.rate !== currentLoan.current_interest_rate ||
+                loanDetails.durationMonths !== currentLoan.loan_tenure_months;
+
+            if (valuesChanged) {
+                console.log('[LoanConfiguration] Updating store with saved loan:', {
+                    principal: currentLoan.principal_amount,
+                    rate: currentLoan.current_interest_rate,
+                    tenure: currentLoan.loan_tenure_months
+                });
+
+                setLoanDetails({
+                    principal: currentLoan.principal_amount,
+                    rate: currentLoan.current_interest_rate,
+                    durationMonths: currentLoan.loan_tenure_months,
+                    startDate: new Date(currentLoan.emi_start_date),
+                });
+            } else {
+                console.log('[LoanConfiguration] Loan values unchanged, skipping store update');
+            }
+        } else {
+            console.log('[LoanConfiguration] No saved loan found, using store defaults');
+        }
+    }, [currentLoan, isInitialized, loanDetails, setLoanDetails]);
+
+    // Sync local state with store whenever store changes (but not from user input)
+    useEffect(() => {
+        console.log('[LoanConfiguration] Store changed, syncing local state. isUserInput:', isUserInputRef.current, 'values:', {
+            principal: loanDetails.principal,
+            rate: loanDetails.rate,
+            years: loanDetails.durationMonths / 12
+        });
+
+        if (!isUserInputRef.current) {
+            setAmount(loanDetails.principal);
+            setRate(loanDetails.rate);
+            setYears(loanDetails.durationMonths / 12);
+        }
+        isUserInputRef.current = false; // Reset flag
+    }, [loanDetails]);
+
+    // Log when isInitialized changes
+    useEffect(() => {
+        console.log('[LoanConfiguration] isInitialized changed to:', isInitialized);
+    }, [isInitialized]);
+
+    // Debounced auto-save function
+    const debouncedSave = useCallback(async (principal: number, interestRate: number, tenure: number) => {
+        try {
+            const loanData = {
+                id: currentLoan?.id,
+                principal_amount: principal,
+                original_interest_rate: interestRate,
+                current_interest_rate: interestRate,
+                loan_tenure_months: tenure,
+                emi_start_date: currentLoan?.emi_start_date || new Date().toISOString().split('T')[0],
+                bank_name: currentLoan?.bank_name || '',
+                loan_label: currentLoan?.loan_label || 'Other',
+                loan_number: currentLoan?.loan_number || '',
+            };
+
+            await saveLoanDetails(loanData);
+
+            console.log('✅ Loan configuration auto-saved to IndexedDB');
+        } catch (error) {
+            console.error('Error auto-saving loan configuration:', error);
+        }
+    }, [currentLoan, saveLoanDetails]);
+
+    // Trigger debounced save when local values change
+    useEffect(() => {
+        if (!isInitialized) return;
+
         const principal = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const interestRate = typeof rate === 'string' ? parseFloat(rate) || 0 : rate;
+        const tenure = years * 12;
 
+        console.log('[LoanConfiguration] Values changed, setting debounce timer:', {
+            principal,
+            interestRate,
+            tenure
+        });
+
+        // Set flag to indicate this is user input
+        isUserInputRef.current = true;
+
+        // Update store immediately for UI consistency
         setLoanDetails({
             principal,
             rate: interestRate,
-            durationMonths: years * 12,
+            durationMonths: tenure,
             startDate: loanDetails.startDate
-        })
-    }, [amount, rate, years, setLoanDetails, loanDetails.startDate])
+        });
+
+        // Clear existing timer
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        // Set new timer for 2 seconds to save to IndexedDB
+        debounceTimerRef.current = setTimeout(() => {
+            console.log('[LoanConfiguration] Debounce timer fired, saving to IndexedDB...');
+            debouncedSave(principal, interestRate, tenure);
+        }, 2000);
+
+        // Cleanup on unmount
+        return () => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+        };
+    }, [amount, rate, years, isInitialized, debouncedSave, setLoanDetails, loanDetails.startDate]);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -74,11 +203,7 @@ export function LoanConfiguration() {
 
             // If we have a loan in the database/storage, use those values
             if (currentLoan) {
-                setAmount(currentLoan.principal_amount);
-                setRate(currentLoan.current_interest_rate);
-                setYears(currentLoan.loan_tenure_months / 12);
-
-                // Update the EMI calculation store
+                // Update the store with saved values
                 setLoanDetails({
                     principal: currentLoan.principal_amount,
                     rate: currentLoan.current_interest_rate,
@@ -91,19 +216,14 @@ export function LoanConfiguration() {
                     description: "Loan details reloaded from storage",
                 });
             } else {
-                // If no loan exists in database, use default values
-                const defaultValues = {
+                // If no loan exists in database, reset to store's default values
+                // Store defaults: PA: 5000000, Rate: 7.5%, Tenure: 240 months
+                setLoanDetails({
                     principal: 5000000,
-                    rate: 9,
+                    rate: 7.5,
                     durationMonths: 240,
                     startDate: new Date(),
-                };
-
-                setAmount(defaultValues.principal);
-                setRate(defaultValues.rate);
-                setYears(defaultValues.durationMonths / 12);
-
-                setLoanDetails(defaultValues);
+                });
 
                 toast({
                     title: "ℹ️ Reset to Defaults",
