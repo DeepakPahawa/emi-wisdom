@@ -15,6 +15,7 @@ import { AuthProvider } from "@/contexts/AuthContext"
 import { UserProfile } from "@/components/UserProfile"
 import { useStorageSync } from "@/hooks/useStorageSync"
 import { StorageIndicator } from "@/components/StorageIndicator"
+import { StorageToggle } from "@/components/StorageToggle"
 
 export default function Home() {
   const { recalculate } = useEmiStore();
@@ -59,6 +60,7 @@ export default function Home() {
             <div className="lg:col-span-4 space-y-6">
               <LoanConfiguration />
               <LoanDetails />
+              <StorageToggle />
             </div>
 
             {/* Right Column: Amortization Table + Charts (8 cols) */}

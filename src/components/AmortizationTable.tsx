@@ -17,13 +17,19 @@ import { useToast } from '@/hooks/use-toast';
 import { useLoanDetailsStore } from '@/store/loan-details-store';
 import { useEmiTransactionsStore } from '@/store/emi-transactions-store';
 import { useAuth } from '@/contexts/AuthContext';
-import { emiTransactionsService, localStorageService } from '@/services';
 import { ArrowLeftRight, Edit2, Trash2, Loader2, ArrowDownUp } from 'lucide-react';
 
 export function AmortizationTable() {
     const { schedule, calculationResult, updatePaidEmi, updatePartPayment } = useEmiStore();
     const { currentLoan } = useLoanDetailsStore();
-    const { transactions, fetchTransactionsByLoanId } = useEmiTransactionsStore();
+    const {
+        transactions,
+        fetchTransactionsByLoanId,
+        saveTransaction: saveTransactionToStore,
+        deleteTransaction: deleteTransactionFromStore,
+        batchSaveTransactions,
+        deleteTransactionsFromMonth
+    } = useEmiTransactionsStore();
     const { user } = useAuth();
     const [editingCell, setEditingCell] = useState<{ month: number; field: 'paidEmi' | 'partPayment' } | null>(null);
     const [hoveredCell, setHoveredCell] = useState<number | null>(null);
@@ -127,40 +133,24 @@ export function AmortizationTable() {
                 interest_component: interestComponent,
             };
 
-            if (user) {
-                // Use Supabase API via service
-                const result = await emiTransactionsService.saveTransaction(transactionData);
+            // Use store method which handles both online and offline
+            const result = await saveTransactionToStore(transactionData);
 
-                const actionText = result.isUpdate ? 'Updated' : 'Saved';
-                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
-                toast({
-                    title: `✅ Transaction ${actionText}`,
-                    description: `${typeText} of ₹${amount.toLocaleString('en-IN')} ${actionText.toLowerCase()} successfully`,
-                });
+            const actionText = result.isUpdate ? 'Updated' : 'Saved';
+            const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
+            const storageType = user ? '' : ' (Offline)';
 
-                // Refresh transactions after saving
-                if (currentLoan?.id) {
-                    fetchTransactionsByLoanId(currentLoan.id, true);
-                }
+            toast({
+                title: `✅ Transaction ${actionText}`,
+                description: `${typeText} of ₹${amount.toLocaleString('en-IN')} ${actionText.toLowerCase()} successfully${storageType}`,
+            });
 
-                return result.data;
-            } else {
-                // Use LocalStorage
-                const savedTransaction = await localStorageService.saveTransaction(transactionData);
-
-                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
-                toast({
-                    title: `✅ Transaction Saved Locally`,
-                    description: `${typeText} of ₹${amount.toLocaleString('en-IN')} saved to local storage`,
-                });
-
-                // Refresh transactions after saving
-                if (currentLoan?.id) {
-                    fetchTransactionsByLoanId(currentLoan.id, false);
-                }
-
-                return savedTransaction;
+            // Refresh transactions after saving
+            if (currentLoan?.id) {
+                fetchTransactionsByLoanId(currentLoan.id, !!user);
             }
+
+            return result.data;
         } catch (error) {
             console.error('Error saving EMI transaction:', error);
             toast({
@@ -192,34 +182,20 @@ export function AmortizationTable() {
                 return; // Transaction doesn't exist in database/storage
             }
 
-            if (user) {
-                // Use Supabase API via service
-                await emiTransactionsService.deleteTransaction(transactionToDelete.id);
+            // Use store method which handles both online and offline
+            await deleteTransactionFromStore(transactionToDelete.id);
 
-                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
-                toast({
-                    title: `🗑️ Transaction Deleted`,
-                    description: `${typeText} for month ${month} removed successfully`,
-                });
+            const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
+            const storageType = user ? '' : ' (Offline)';
 
-                // Refresh transactions after deleting
-                if (currentLoan?.id) {
-                    fetchTransactionsByLoanId(currentLoan.id, true);
-                }
-            } else {
-                // Use LocalStorage
-                await localStorageService.deleteTransaction(transactionToDelete.id);
+            toast({
+                title: `🗑️ Transaction Deleted`,
+                description: `${typeText} for month ${month} removed successfully${storageType}`,
+            });
 
-                const typeText = transactionType === 'emi' ? 'EMI Payment' : 'Part Payment';
-                toast({
-                    title: `🗑️ Transaction Deleted`,
-                    description: `${typeText} for month ${month} removed from local storage`,
-                });
-
-                // Refresh transactions after deleting
-                if (currentLoan?.id) {
-                    fetchTransactionsByLoanId(currentLoan.id, false);
-                }
+            // Refresh transactions after deleting
+            if (currentLoan?.id) {
+                fetchTransactionsByLoanId(currentLoan.id, !!user);
             }
 
             return;
@@ -286,8 +262,18 @@ export function AmortizationTable() {
                 return;
             }
 
-            // Set loading state for all months being synced
-            const monthNumbers = new Set(monthsToSync.map(p => p.month));
+            // Filter out months that already have transactions
+            const monthsWithoutTransactions = monthsToSync.filter(point => {
+                const hasExistingTransaction = transactions.some(
+                    t => t.loan_id === currentLoan.id &&
+                        t.month_number === point.month &&
+                        t.transaction_type === transactionType
+                );
+                return !hasExistingTransaction;
+            });
+
+            // Only set loading state for months that don't have transactions yet
+            const monthNumbers = new Set(monthsWithoutTransactions.map(p => p.month));
             if (transactionType === 'emi') {
                 setSyncingMonths(monthNumbers);
             } else {
@@ -298,7 +284,7 @@ export function AmortizationTable() {
             const loanId = currentLoan.id;
 
             // Prepare batch transactions
-            const transactions = monthsToSync.map(point => {
+            const transactionsToSave = monthsToSync.map(point => {
                 // For both EMI and Part Payment: use scheduled EMI amount
                 const amount = calculationResult.emi;
 
@@ -323,7 +309,7 @@ export function AmortizationTable() {
             });
 
             // Call batch API endpoint via service
-            const result = await emiTransactionsService.batchSaveTransactions(transactions);
+            const result = await batchSaveTransactions(loanId, transactionsToSave);
 
             // Update local state for all synced months
             monthsToSync.forEach(point => {
@@ -382,8 +368,18 @@ export function AmortizationTable() {
                 return;
             }
 
-            // Set loading state for all months being deleted
-            const monthNumbers = new Set(monthsToDelete.map(p => p.month));
+            // Filter to only months that have transactions to delete
+            const monthsWithTransactions = monthsToDelete.filter(point => {
+                const hasExistingTransaction = transactions.some(
+                    t => t.loan_id === currentLoan.id &&
+                        t.month_number === point.month &&
+                        t.transaction_type === transactionType
+                );
+                return hasExistingTransaction;
+            });
+
+            // Only set loading state for months that have transactions to delete
+            const monthNumbers = new Set(monthsWithTransactions.map(p => p.month));
             if (transactionType === 'emi') {
                 setSyncingMonths(monthNumbers);
             } else {
@@ -391,7 +387,7 @@ export function AmortizationTable() {
             }
 
             // Call batch delete API endpoint via service
-            const deletedCount = await emiTransactionsService.deleteTransactionsFromMonth(
+            const deletedCount = await deleteTransactionsFromMonth(
                 currentLoan.id,
                 transactionType,
                 month
@@ -495,7 +491,7 @@ export function AmortizationTable() {
             };
 
             // Save using the single transaction endpoint via service
-            const result = await emiTransactionsService.saveTransaction(transactionData);
+            const result = await saveTransactionToStore(transactionData);
 
             // Update local state
             updatePartPayment(month, previousAmount);

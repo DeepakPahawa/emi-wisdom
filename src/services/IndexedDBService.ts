@@ -349,6 +349,22 @@ class IndexedDBService {
     }
 
     /**
+     * Delete a single EMI transaction by ID
+     */
+    async deleteEmiTransaction(id: string): Promise<void> {
+        const db = await this.getDB();
+
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([EMI_TRANSACTIONS_STORE], 'readwrite');
+            const store = transaction.objectStore(EMI_TRANSACTIONS_STORE);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(new Error('Failed to delete EMI transaction'));
+        });
+    }
+
+    /**
      * Delete EMI transactions for a loan
      */
     async deleteEmiTransactions(loanId: string): Promise<void> {

@@ -68,11 +68,8 @@ class EmiTransactionsService {
         try {
             const isUpdate = !!transaction.id;
 
-            // Get existing transactions
-            const existingTransactions = await storageService.getEmiTransactions(transaction.loan_id);
-
             // Create the transaction object
-            const newTransaction: Partial<IndexedDBEmiTransaction> = {
+            const transactionData: Partial<IndexedDBEmiTransaction> = {
                 id: transaction.id,
                 loan_id: transaction.loan_id,
                 month_number: transaction.month_number,
@@ -83,21 +80,11 @@ class EmiTransactionsService {
                 interest_component: transaction.interest_component,
             };
 
-            // Update or add the transaction
-            let updatedTransactions: Partial<IndexedDBEmiTransaction>[];
-            if (isUpdate) {
-                updatedTransactions = existingTransactions.map(t =>
-                    t.id === transaction.id ? { ...t, ...newTransaction } : t
-                );
-            } else {
-                updatedTransactions = [...existingTransactions, newTransaction];
-            }
-
-            // Save all transactions
-            await storageService.saveEmiTransactions(transaction.loan_id, updatedTransactions);
+            // Save using the single transaction method
+            const saved = await storageService.saveEmiTransaction(transactionData);
 
             return {
-                data: newTransaction as EmiTransaction,
+                data: saved as unknown as EmiTransaction,
                 isUpdate,
             };
         } catch (error) {
@@ -150,6 +137,18 @@ class EmiTransactionsService {
             return { id, ...updateData } as EmiTransaction;
         } catch (error) {
             console.error('[EmiTransactionsService] Error updating transaction:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a single transaction by ID
+     */
+    async deleteTransaction(id: string): Promise<void> {
+        try {
+            await storageService.deleteEmiTransaction(id);
+        } catch (error) {
+            console.error('[EmiTransactionsService] Error deleting transaction:', error);
             throw error;
         }
     }

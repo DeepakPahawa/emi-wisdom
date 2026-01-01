@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Pencil } from "lucide-react"
 import { useEmiStore } from "@/store/emi-store"
 import { useLoanDetailsStore } from "@/store/loan-details-store"
@@ -47,11 +47,42 @@ export function LoanDetails() {
     const [loanLabelText, setLoanLabelText] = useState<string>("")
     const [isEditMode, setIsEditMode] = useState<boolean>(false)
     const [showLoginDialog, setShowLoginDialog] = useState<boolean>(false)
+    const hasInitialized = useRef(false);
 
-    // Fetch loan details on mount using the store
+    // Fetch loan details on mount and auto-create if none exists
     useEffect(() => {
-        fetchLoanDetails();
+        const initializeLoan = async () => {
+            if (hasInitialized.current) return;
+            hasInitialized.current = true;
+
+            // Fetch existing loan details
+            await fetchLoanDetails();
+        };
+
+        initializeLoan();
     }, [fetchLoanDetails]);
+
+    // Auto-create a default loan if none exists after initial fetch
+    useEffect(() => {
+        const createDefaultLoan = async () => {
+            // Only run after we've fetched and if no loan exists
+            if (hasInitialized.current && !currentLoan && !storeLoading && !storeSaving) {
+                console.log('[LoanDetails] No loan found, creating default loan record');
+                await saveLoanDetails({
+                    loan_number: `LOAN-${Date.now()}`,
+                    principal_amount: loanDetails.principal,
+                    original_interest_rate: loanDetails.rate,
+                    current_interest_rate: loanDetails.rate,
+                    emi_start_date: loanDetails.startDate.toISOString().split('T')[0],
+                    loan_tenure_months: loanDetails.durationMonths,
+                    bank_name: 'Not Specified',
+                    loan_label: 'HomeLoan',
+                });
+            }
+        };
+
+        createDefaultLoan();
+    }, [currentLoan, storeLoading, storeSaving, loanDetails, saveLoanDetails]);
 
     // Update form fields when currentLoan changes in the store
     useEffect(() => {

@@ -185,7 +185,59 @@ class StorageService {
     // ==================== EMI TRANSACTIONS OPERATIONS ====================
 
     /**
-     * Save EMI transactions
+     * Save a single EMI transaction
+     */
+    async saveEmiTransaction(data: Partial<IndexedDBEmiTransaction>): Promise<IndexedDBEmiTransaction> {
+        const isAuth = await this.isAuthenticated();
+
+        if (isAuth) {
+            // Save to Supabase
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const transactionData = {
+                id: data.id,
+                loan_id: data.loan_id,
+                user_id: user?.id,
+                month_number: data.month_number,
+                emi_date: data.emi_date,
+                transaction_type: data.transaction_type || 'emi',
+                amount_paid: data.amount_paid || 0,
+                principal_component: data.principal_component || 0,
+                interest_component: data.interest_component || 0,
+                created_at: data.created_at || getCurrentTimestamp(),
+                updated_at: getCurrentTimestamp(),
+            };
+
+            if (data.id) {
+                // Update existing
+                const { data: updated, error } = await supabase
+                    .from('emi_transactions')
+                    .update(transactionData)
+                    .eq('id', data.id)
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                return updated as unknown as IndexedDBEmiTransaction;
+            } else {
+                // Create new
+                const { data: created, error } = await supabase
+                    .from('emi_transactions')
+                    .insert([transactionData])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                return created as unknown as IndexedDBEmiTransaction;
+            }
+        } else {
+            // Save to IndexedDB
+            return await indexedDBService.saveEmiTransaction(data);
+        }
+    }
+
+    /**
+     * Save EMI transactions (batch)
      */
     async saveEmiTransactions(loanId: string, transactions: Partial<IndexedDBEmiTransaction>[]): Promise<void> {
         const isAuth = await this.isAuthenticated();
@@ -275,6 +327,24 @@ class StorageService {
             if (error) throw error;
         } else {
             await indexedDBService.updateEmiTransaction(id, data);
+        }
+    }
+
+    /**
+     * Delete a single EMI transaction by ID
+     */
+    async deleteEmiTransaction(id: string): Promise<void> {
+        const isAuth = await this.isAuthenticated();
+
+        if (isAuth) {
+            const { error } = await supabase
+                .from('emi_transactions')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        } else {
+            await indexedDBService.deleteEmiTransaction(id);
         }
     }
 
