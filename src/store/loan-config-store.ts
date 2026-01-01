@@ -12,6 +12,8 @@ export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
     principal: DEFAULT_PRINCIPAL,
     interest: DEFAULT_INTEREST,
     tenure: DEFAULT_TENURE,
+    emiStartDate: new Date(),
+    transactions: {},
     isInitialized: false,
 
     // Actions
@@ -27,6 +29,19 @@ export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
         set({ tenure, isInitialized: true });
     },
 
+    setEmiStartDate: (date: Date | string) => {
+        set({ emiStartDate: date, isInitialized: true });
+    },
+
+    updateTransaction: (month: number, paidEmi: number, partPayment: number) => {
+        set((state) => ({
+            transactions: {
+                ...state.transactions,
+                [month]: { month, paidEmi, partPayment },
+            },
+        }));
+    },
+
     setInitialized: (initialized: boolean) => {
         set({ isInitialized: initialized });
     },
@@ -40,6 +55,7 @@ export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
                     principal: savedConfig.principal,
                     interest: savedConfig.interest,
                     tenure: savedConfig.tenure,
+                    emiStartDate: savedConfig.emiStartDate || new Date(),
                     isInitialized: true,
                 });
             } else {

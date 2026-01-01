@@ -118,3 +118,17 @@ export function formatDate(date: Date): string {
         day: 'numeric',
     }).format(date);
 }
+
+/**
+ * Format month name with year abbreviation (e.g., Jan'26, Feb'26)
+ */
+export function formatMonthYear(startDate: Date, monthNumber: number): string {
+    const date = new Date(startDate);
+    date.setMonth(date.getMonth() + monthNumber - 1);
+
+    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear().toString().slice(-2);
+
+    return `${monthName}'${year}`;
+}
+

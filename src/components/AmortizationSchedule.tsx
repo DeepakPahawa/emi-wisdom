@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLoanConfigStore } from "@/store/loan-config-store";
-import { generateAmortizationSchedule, formatCurrency } from "@/lib/loan-calculations";
+import { generateAmortizationSchedule, formatCurrency, formatMonthYear } from "@/lib/loan-calculations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Table,
@@ -12,9 +12,11 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Copy } from "lucide-react";
 
 export function AmortizationSchedule() {
-    const { principal, interest, tenure, isInitialized } = useLoanConfigStore();
+    const { principal, interest, tenure, isInitialized, emiStartDate, transactions, updateTransaction } = useLoanConfigStore();
+    const [hoveredCell, setHoveredCell] = useState<{ month: number; type: 'paid' | 'part' } | null>(null);
 
     const schedule = useMemo(() => {
         if (!isInitialized || principal <= 0 || interest <= 0 || tenure <= 0) {
@@ -53,8 +55,11 @@ export function AmortizationSchedule() {
                     <Table>
                         <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                             <TableRow className="hover:bg-transparent border-b-2">
-                                <TableHead className="font-bold text-center w-16 text-xs py-2">Month</TableHead>
+                                <TableHead className="font-bold text-center w-12 text-xs py-2">#</TableHead>
+                                <TableHead className="font-bold text-center w-20 text-xs py-2">Month</TableHead>
                                 <TableHead className="font-bold text-right text-xs py-2">EMI</TableHead>
+                                <TableHead className="font-bold text-right text-xs py-2">Paid EMI</TableHead>
+                                <TableHead className="font-bold text-right text-xs py-2">Part Payment</TableHead>
                                 <TableHead className="font-bold text-right text-xs py-2">Principal</TableHead>
                                 <TableHead className="font-bold text-right text-xs py-2">Interest</TableHead>
                                 <TableHead className="font-bold text-right text-xs py-2">Balance</TableHead>
@@ -66,6 +71,27 @@ export function AmortizationSchedule() {
                                 const isLastPayment = index === schedule.length - 1;
                                 const principalPercentage = (payment.principal / payment.emi) * 100;
                                 const interestPercentage = (payment.interest / payment.emi) * 100;
+                                const transaction = transactions[payment.month] || { paidEmi: 0, partPayment: 0 };
+                                const startDate = emiStartDate ? new Date(emiStartDate) : new Date();
+
+                                const handleCopyEmi = () => {
+                                    updateTransaction(payment.month, payment.emi, transaction.partPayment);
+                                };
+
+                                const handleCopyPartPayment = () => {
+                                    const halfEmi = Math.ceil(payment.emi / 2);
+                                    updateTransaction(payment.month, transaction.paidEmi, halfEmi);
+                                };
+
+                                const handlePaidEmiChange = (value: string) => {
+                                    const numValue = parseFloat(value) || 0;
+                                    updateTransaction(payment.month, numValue, transaction.partPayment);
+                                };
+
+                                const handlePartPaymentChange = (value: string) => {
+                                    const numValue = parseFloat(value) || 0;
+                                    updateTransaction(payment.month, transaction.paidEmi, numValue);
+                                };
 
                                 return (
                                     <TableRow
@@ -77,14 +103,76 @@ export function AmortizationSchedule() {
                                             ${isLastPayment ? 'border-b-2 border-green-500 dark:border-green-600' : ''}
                                         `}
                                     >
+                                        {/* Month Number */}
                                         <TableCell className="text-center font-semibold py-2">
                                             <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs group-hover:scale-110 transition-transform duration-200">
                                                 {payment.month}
                                             </div>
                                         </TableCell>
+
+                                        {/* Month Name */}
+                                        <TableCell className="text-center font-medium text-sm py-2">
+                                            {formatMonthYear(startDate, payment.month)}
+                                        </TableCell>
+
+                                        {/* EMI */}
                                         <TableCell className="text-right font-semibold text-foreground text-sm py-2">
                                             {formatCurrency(payment.emi)}
                                         </TableCell>
+
+                                        {/* Paid EMI */}
+                                        <TableCell className="text-right py-2">
+                                            <div
+                                                className="relative inline-block w-full"
+                                                onMouseEnter={() => setHoveredCell({ month: payment.month, type: 'paid' })}
+                                                onMouseLeave={() => setHoveredCell(null)}
+                                            >
+                                                <input
+                                                    type="number"
+                                                    value={transaction.paidEmi || ''}
+                                                    onChange={(e) => handlePaidEmiChange(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                {hoveredCell?.month === payment.month && hoveredCell?.type === 'paid' && (
+                                                    <button
+                                                        onClick={handleCopyEmi}
+                                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors duration-200"
+                                                        title="Copy EMI amount"
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Part Payment */}
+                                        <TableCell className="text-right py-2">
+                                            <div
+                                                className="relative inline-block w-full"
+                                                onMouseEnter={() => setHoveredCell({ month: payment.month, type: 'part' })}
+                                                onMouseLeave={() => setHoveredCell(null)}
+                                            >
+                                                <input
+                                                    type="number"
+                                                    value={transaction.partPayment || ''}
+                                                    onChange={(e) => handlePartPaymentChange(e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                                {hoveredCell?.month === payment.month && hoveredCell?.type === 'part' && (
+                                                    <button
+                                                        onClick={handleCopyPartPayment}
+                                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors duration-200"
+                                                        title="Copy EMI amount"
+                                                    >
+                                                        <Copy className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Principal */}
                                         <TableCell className="text-right py-2">
                                             <div className="space-y-0.5">
                                                 <div className="font-medium text-blue-700 dark:text-blue-400 text-sm">
@@ -101,6 +189,8 @@ export function AmortizationSchedule() {
                                                 </div>
                                             </div>
                                         </TableCell>
+
+                                        {/* Interest */}
                                         <TableCell className="text-right py-2">
                                             <div className="space-y-0.5">
                                                 <div className="font-medium text-orange-700 dark:text-orange-400 text-sm">
@@ -117,6 +207,8 @@ export function AmortizationSchedule() {
                                                 </div>
                                             </div>
                                         </TableCell>
+
+                                        {/* Balance */}
                                         <TableCell className="text-right py-2">
                                             <div className={`
                                                 font-semibold text-sm
