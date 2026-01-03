@@ -29,11 +29,11 @@ export function AmortizationSchedule() {
         return (
             <Card className="w-full">
                 <CardHeader>
-                    <CardTitle className="text-2xl font-bold">Amortization Schedule</CardTitle>
+                    <CardTitle className="text-2xl font-bold">EMI Schedule</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-center py-8">
-                        Configure your loan parameters to see the amortization schedule
+                        Configure your loan parameters to see the EMI schedule
                     </p>
                 </CardContent>
             </Card>
@@ -44,7 +44,7 @@ export function AmortizationSchedule() {
         <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0">
             <CardHeader className="bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-cyan-500/10 border-b py-4">
                 <CardTitle className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
-                    Amortization Schedule
+                    EMI Schedule
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
                     Monthly breakdown of your loan payments over {tenure} months

@@ -48,7 +48,7 @@ export default function Home() {
             <LoanConfiguration />
           </div>
 
-          {/* Right Column: Loan Overview and Amortization Schedule (8 cols) */}
+          {/* Right Column: Loan Overview and EMI Schedule (8 cols) */}
           <div className="lg:col-span-8 space-y-8">
             <LoanOverview />
             <AmortizationSchedule />

@@ -40,8 +40,8 @@ export function LoanOverview() {
     const principalPercentage = (principal / summary.totalCost) * 100;
 
     return (
-        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-b [.border-b]:pb-2 py-4">
+        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0 pb-6">
+            <CardHeader className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border-b py-4">
                 <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     Loan Overview
                 </CardTitle>
