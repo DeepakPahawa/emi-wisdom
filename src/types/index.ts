@@ -21,6 +21,7 @@ export interface LoanConfigStore extends LoanConfig {
     setTenure: (tenure: number, markInitialized?: boolean) => void;
     setEmiStartDate: (date: Date | string, markInitialized?: boolean) => void;
     updateTransaction: (month: number, paidEmi: number, partPayment: number) => void;
+    updateBulkTransactions: (updates: Array<{ month: number; paidEmi: number; partPayment: number }>) => void;
     loadFromStorage: () => Promise<void>;
     setInitialized: (initialized: boolean) => void;
 }

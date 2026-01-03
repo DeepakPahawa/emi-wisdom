@@ -43,6 +43,16 @@ export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
         }));
     },
 
+    updateBulkTransactions: (updates: Array<{ month: number; paidEmi: number; partPayment: number }>) => {
+        set((state) => {
+            const newTransactions = { ...state.transactions };
+            updates.forEach(({ month, paidEmi, partPayment }) => {
+                newTransactions[month] = { month, paidEmi, partPayment };
+            });
+            return { transactions: newTransactions };
+        });
+    },
+
     setInitialized: (initialized: boolean) => {
         set({ isInitialized: initialized });
     },
