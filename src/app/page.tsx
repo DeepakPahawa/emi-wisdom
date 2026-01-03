@@ -5,17 +5,33 @@ import { LoanConfiguration } from "@/components/LoanConfiguration"
 import { LoanOverview } from "@/components/LoanOverview"
 import { AmortizationSchedule } from "@/components/AmortizationSchedule"
 import { useLoanConfigStore } from "@/store/loan-config-store"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { MonitorPlay } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
+import { testIndexedDB } from "@/lib/test-indexeddb"
 
 export default function Home() {
   const { loadFromStorage } = useLoanConfigStore();
+  const hasLoadedRef = useRef(false);
 
-  // Initialize the store on mount
+  // Initialize the store on mount (only once)
   useEffect(() => {
-    loadFromStorage();
+    if (!hasLoadedRef.current) {
+      console.log("🚀 Initializing app - loading from IndexedDB...");
+
+      // Test IndexedDB availability first
+      testIndexedDB().then((result) => {
+        if (result.available) {
+          console.log("✅ IndexedDB is available and working");
+        } else {
+          console.error("❌ IndexedDB test failed:", result.error, result.details);
+        }
+      });
+
+      loadFromStorage();
+      hasLoadedRef.current = true;
+    }
   }, [loadFromStorage]);
 
   return (

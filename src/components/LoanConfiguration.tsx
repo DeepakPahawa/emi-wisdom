@@ -17,18 +17,13 @@ export function LoanConfiguration() {
         interest,
         tenure,
         isInitialized,
+        isLoading,
         setPrincipal,
         setInterest,
         setTenure,
-        loadFromStorage,
     } = useLoanConfigStore();
 
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Load from IndexedDB on mount
-    useEffect(() => {
-        loadFromStorage();
-    }, [loadFromStorage]);
 
     // Debounced save function
     const debouncedSave = useCallback(() => {
@@ -40,6 +35,7 @@ export function LoanConfiguration() {
         // Set new timer
         debounceTimerRef.current = setTimeout(async () => {
             try {
+                console.log("💾 Saving loan config to IndexedDB:", { principal, interest, tenure });
                 await saveLoanConfig({ principal, interest, tenure });
             } catch (error) {
                 console.error("Failed to save loan config:", error);
@@ -94,7 +90,15 @@ export function LoanConfiguration() {
     return (
         <Card className="w-full">
             <CardHeader>
-                <CardTitle className="text-2xl font-bold">Loan Configuration</CardTitle>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-2xl font-bold">Loan Configuration</CardTitle>
+                    {isLoading && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            <span>Loading...</span>
+                        </div>
+                    )}
+                </div>
             </CardHeader>
             <CardContent className="space-y-8">
                 {/* Principal Amount */}

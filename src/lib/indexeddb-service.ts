@@ -15,24 +15,44 @@ export const initDB = (): Promise<IDBDatabase> => {
             return;
         }
 
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        if (!window.indexedDB) {
+            reject(new Error("IndexedDB is not supported in this browser"));
+            return;
+        }
 
-        request.onerror = () => {
-            reject(new Error("Failed to open IndexedDB"));
-        };
+        try {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onsuccess = () => {
-            resolve(request.result);
-        };
+            request.onerror = (event) => {
+                const error = (event.target as IDBOpenDBRequest).error;
+                console.error("❌ IndexedDB open error:", error);
+                reject(new Error(`Failed to open IndexedDB: ${error?.message || 'Unknown error'}`));
+            };
 
-        request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
+            request.onblocked = () => {
+                console.warn("⚠️ IndexedDB is blocked. Please close other tabs with this app.");
+                reject(new Error("IndexedDB is blocked by another connection"));
+            };
 
-            // Create object store if it doesn't exist
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
+            request.onsuccess = () => {
+                console.log("✅ IndexedDB opened successfully");
+                resolve(request.result);
+            };
+
+            request.onupgradeneeded = (event) => {
+                console.log("🔄 Upgrading IndexedDB schema...");
+                const db = (event.target as IDBOpenDBRequest).result;
+
+                // Create object store if it doesn't exist
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                    console.log(`✅ Created object store: ${STORE_NAME}`);
+                }
+            };
+        } catch (error) {
+            console.error("❌ Exception while opening IndexedDB:", error);
+            reject(error);
+        }
     });
 };
 

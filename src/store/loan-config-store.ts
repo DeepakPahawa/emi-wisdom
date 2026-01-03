@@ -15,22 +15,23 @@ export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
     emiStartDate: new Date(),
     transactions: {},
     isInitialized: false,
+    isLoading: false,
 
     // Actions
-    setPrincipal: (principal: number) => {
-        set({ principal, isInitialized: true });
+    setPrincipal: (principal: number, markInitialized = true) => {
+        set({ principal, ...(markInitialized && { isInitialized: true }) });
     },
 
-    setInterest: (interest: number) => {
-        set({ interest, isInitialized: true });
+    setInterest: (interest: number, markInitialized = true) => {
+        set({ interest, ...(markInitialized && { isInitialized: true }) });
     },
 
-    setTenure: (tenure: number) => {
-        set({ tenure, isInitialized: true });
+    setTenure: (tenure: number, markInitialized = true) => {
+        set({ tenure, ...(markInitialized && { isInitialized: true }) });
     },
 
-    setEmiStartDate: (date: Date | string) => {
-        set({ emiStartDate: date, isInitialized: true });
+    setEmiStartDate: (date: Date | string, markInitialized = true) => {
+        set({ emiStartDate: date, ...(markInitialized && { isInitialized: true }) });
     },
 
     updateTransaction: (month: number, paidEmi: number, partPayment: number) => {
@@ -47,25 +48,37 @@ export const useLoanConfigStore = create<LoanConfigStore>((set) => ({
     },
 
     loadFromStorage: async () => {
+        set({ isLoading: true });
         try {
             const savedConfig = await loadLoanConfig();
 
             if (savedConfig) {
+                // Ensure emiStartDate is properly converted to Date if it's a string
+                const emiStartDate = savedConfig.emiStartDate
+                    ? (typeof savedConfig.emiStartDate === 'string'
+                        ? new Date(savedConfig.emiStartDate)
+                        : savedConfig.emiStartDate)
+                    : new Date();
+
+                console.log("📥 Loading saved config from IndexedDB:", savedConfig);
+
                 set({
                     principal: savedConfig.principal,
                     interest: savedConfig.interest,
                     tenure: savedConfig.tenure,
-                    emiStartDate: savedConfig.emiStartDate || new Date(),
+                    emiStartDate,
                     isInitialized: true,
+                    isLoading: false,
                 });
             } else {
+                console.log("ℹ️ No saved config found, using defaults");
                 // No saved config, use defaults
-                set({ isInitialized: true });
+                set({ isInitialized: true, isLoading: false });
             }
         } catch (error) {
-            console.error("Error loading from storage:", error);
+            console.error("❌ Error loading from storage:", error);
             // On error, still mark as initialized with defaults
-            set({ isInitialized: true });
+            set({ isInitialized: true, isLoading: false });
         }
     },
 }));

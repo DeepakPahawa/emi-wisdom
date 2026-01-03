@@ -13,12 +13,13 @@ export interface EmiTransaction {
 
 export interface LoanConfigStore extends LoanConfig {
     isInitialized: boolean;
+    isLoading: boolean;
     emiStartDate?: Date | string;
     transactions: Record<number, EmiTransaction>; // month number -> transaction
-    setPrincipal: (principal: number) => void;
-    setInterest: (interest: number) => void;
-    setTenure: (tenure: number) => void;
-    setEmiStartDate: (date: Date | string) => void;
+    setPrincipal: (principal: number, markInitialized?: boolean) => void;
+    setInterest: (interest: number, markInitialized?: boolean) => void;
+    setTenure: (tenure: number, markInitialized?: boolean) => void;
+    setEmiStartDate: (date: Date | string, markInitialized?: boolean) => void;
     updateTransaction: (month: number, paidEmi: number, partPayment: number) => void;
     loadFromStorage: () => Promise<void>;
     setInitialized: (initialized: boolean) => void;
