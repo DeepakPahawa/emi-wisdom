@@ -42,17 +42,17 @@ export function AmortizationSchedule() {
     }
 
     return (
-        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0">
-            <CardHeader className="bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-cyan-500/10 border-b py-4">
-                <CardTitle className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
+        <Card className="w-full">
+            <CardHeader className="border-b">
+                <CardTitle className="text-lg font-semibold">
                     EMI Schedule
                 </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                    Monthly breakdown of your loan payments over {tenure} months
+                <p className="text-sm text-muted-foreground mt-1">
+                    Monthly breakdown of your loan payments
                 </p>
             </CardHeader>
             <CardContent className="p-0">
-                <div className="max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-gray-200 dark:scrollbar-track-gray-800">
+                <div className="max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/40 scrollbar-track-transparent">
                     <Table>
                         <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                             <TableRow className="hover:bg-transparent border-b-2">
@@ -182,17 +182,14 @@ export function AmortizationSchedule() {
                                     <TableRow
                                         key={payment.month}
                                         className={`
-                                            group transition-all duration-200
+                                            group
                                             ${isEvenRow ? 'bg-muted/30' : 'bg-background'}
-                                            hover:bg-blue-50 dark:hover:bg-blue-950/20
-                                            ${isLastPayment ? 'border-b-2 border-green-500 dark:border-green-600' : ''}
+                                            ${isLastPayment ? 'border-b-2 border-primary' : ''}
                                         `}
                                     >
                                         {/* Month Number */}
-                                        <TableCell className="text-center font-semibold py-2">
-                                            <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs group-hover:scale-110 transition-transform duration-200">
-                                                {payment.month}
-                                            </div>
+                                        <TableCell className="text-center font-medium py-2 text-xs">
+                                            {payment.month}
                                         </TableCell>
 
                                         {/* Month Name */}
@@ -214,7 +211,7 @@ export function AmortizationSchedule() {
                                                         value={transaction.paidEmi || ''}
                                                         onChange={(e) => handlePaidEmiChange(e.target.value)}
                                                         placeholder="-"
-                                                        className="w-full px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-2 py-1 text-sm text-right border border-primary/30 rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter') {
                                                                 e.currentTarget.blur();
@@ -246,7 +243,7 @@ export function AmortizationSchedule() {
                                                                     // Show sync icon when there's no value
                                                                     <button
                                                                         onClick={handleCopyEmi}
-                                                                        className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                        className="p-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded transition-all duration-200 hover:scale-110"
                                                                         title="Sync EMI amount to all previous empty cells"
                                                                     >
                                                                         <ArrowLeftRight className="w-4 h-4" />
@@ -256,7 +253,7 @@ export function AmortizationSchedule() {
                                                                     onClick={() => {
                                                                         setEditingCell({ month: payment.month, type: 'paid' });
                                                                     }}
-                                                                    className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                    className="p-1 bg-primary/60 hover:bg-primary/80 text-primary-foreground rounded transition-all duration-200 hover:scale-110"
                                                                     title="Edit amount"
                                                                 >
                                                                     <Pencil className="w-4 h-4" />
@@ -288,7 +285,7 @@ export function AmortizationSchedule() {
                                                         value={transaction.partPayment || ''}
                                                         onChange={(e) => handlePartPaymentChange(e.target.value)}
                                                         placeholder="-"
-                                                        className="w-full px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full px-2 py-1 text-sm text-right border border-primary/30 rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter') {
                                                                 e.currentTarget.blur();
@@ -312,7 +309,7 @@ export function AmortizationSchedule() {
                                                                     <>
                                                                         <button
                                                                             onClick={handleBulkSyncPartPayment}
-                                                                            className="p-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            className="p-1 bg-primary/80 hover:bg-primary/90 text-primary-foreground rounded transition-all duration-200 hover:scale-110"
                                                                             title="Overwrite this and fill all empty cells before it with previous part payment value"
                                                                         >
                                                                             <ArrowDownToLine className="w-4 h-4" />
@@ -330,14 +327,14 @@ export function AmortizationSchedule() {
                                                                     <>
                                                                         <button
                                                                             onClick={handleBulkSyncPartPayment}
-                                                                            className="p-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            className="p-1 bg-primary/80 hover:bg-primary/90 text-primary-foreground rounded transition-all duration-200 hover:scale-110"
                                                                             title="Fill all empty cells up to this month with previous part payment value"
                                                                         >
                                                                             <ArrowDownToLine className="w-4 h-4" />
                                                                         </button>
                                                                         <button
                                                                             onClick={handleSyncPartPayment}
-                                                                            className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            className="p-1 bg-primary/60 hover:bg-primary/80 text-primary-foreground rounded transition-all duration-200 hover:scale-110"
                                                                             title="Sync from previous part payment or EMI amount"
                                                                         >
                                                                             <ArrowDownUp className="w-4 h-4" />
@@ -348,7 +345,7 @@ export function AmortizationSchedule() {
                                                                     onClick={() => {
                                                                         setEditingCell({ month: payment.month, type: 'part' });
                                                                     }}
-                                                                    className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                    className="p-1 bg-primary/40 hover:bg-primary/60 text-primary-foreground rounded transition-all duration-200 hover:scale-110"
                                                                     title="Edit amount"
                                                                 >
                                                                     <Pencil className="w-4 h-4" />
@@ -374,12 +371,12 @@ export function AmortizationSchedule() {
                                         {/* Principal */}
                                         <TableCell className="text-right py-2">
                                             <div className="space-y-0.5">
-                                                <div className="font-medium text-blue-700 dark:text-blue-400 text-sm">
+                                                <div className="font-medium text-primary text-sm">
                                                     {formatCurrency(payment.principal)}
                                                 </div>
-                                                <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                <div className="h-1 bg-muted rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                                                        className="h-full bg-primary transition-all duration-500"
                                                         style={{ width: `${principalPercentage}%` }}
                                                     ></div>
                                                 </div>
@@ -392,12 +389,12 @@ export function AmortizationSchedule() {
                                         {/* Interest */}
                                         <TableCell className="text-right py-2">
                                             <div className="space-y-0.5">
-                                                <div className="font-medium text-orange-700 dark:text-orange-400 text-sm">
+                                                <div className="font-medium text-primary/60 text-sm">
                                                     {formatCurrency(payment.interest)}
                                                 </div>
-                                                <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                                <div className="h-1 bg-muted rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                                                        className="h-full bg-primary/40 transition-all duration-500"
                                                         style={{ width: `${interestPercentage}%` }}
                                                     ></div>
                                                 </div>
@@ -412,8 +409,8 @@ export function AmortizationSchedule() {
                                             <div className={`
                                                 font-semibold text-sm
                                                 ${payment.balance === 0
-                                                    ? 'text-green-600 dark:text-green-400'
-                                                    : 'text-foreground'
+                                                    ? 'text-primary font-bold'
+                                                    : 'text-foreground font-medium'
                                                 }
                                             `}>
                                                 {payment.balance === 0 ? (
@@ -434,31 +431,23 @@ export function AmortizationSchedule() {
                 </div>
 
                 {/* Summary Footer */}
-                <div className="border-t-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 p-3">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground mb-0.5">Total Months</p>
-                            <p className="text-base font-bold text-foreground">{schedule.length}</p>
+                <div className="border-t p-4 bg-muted/20">
+                    <div className="grid grid-cols-4 gap-4 text-center">
+                        <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase font-medium">Months</p>
+                            <p className="font-semibold">{schedule.length}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground mb-0.5">Monthly EMI</p>
-                            <p className="text-base font-bold text-blue-600 dark:text-blue-400">
-                                {formatCurrency(schedule[0]?.emi || 0)}
-                            </p>
+                        <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase font-medium">EMI</p>
+                            <p className="font-semibold">{formatCurrency(schedule[0]?.emi || 0)}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground mb-0.5">Total Principal</p>
-                            <p className="text-base font-bold text-blue-700 dark:text-blue-300">
-                                {formatCurrency(principal)}
-                            </p>
+                        <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase font-medium">Principal</p>
+                            <p className="font-semibold">{formatCurrency(principal)}</p>
                         </div>
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground mb-0.5">Total Interest</p>
-                            <p className="text-base font-bold text-orange-600 dark:text-orange-400">
-                                {formatCurrency(
-                                    schedule.reduce((sum, p) => sum + p.interest, 0)
-                                )}
-                            </p>
+                        <div className="space-y-1">
+                            <p className="text-[10px] text-muted-foreground uppercase font-medium">Interest</p>
+                            <p className="font-semibold">{formatCurrency(schedule.reduce((sum, p) => sum + p.interest, 0))}</p>
                         </div>
                     </div>
                 </div>

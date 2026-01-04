@@ -45,18 +45,16 @@ export default function Home() {
     >
       <main className="min-h-screen p-4 md:p-8 flex flex-col items-center gap-8 transition-colors duration-300">
         {/* Header */}
-        <header className="w-full max-w-7xl flex justify-between items-center mb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary/90 rounded-lg shadow-lg shadow-primary/30">
-              <MonitorPlay className="w-6 h-6 text-primary-foreground" />
+        <header className="w-full max-w-7xl flex justify-between items-center px-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary text-primary-foreground rounded-md">
+              <MonitorPlay className="w-5 h-5" />
             </div>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight">
               EMI Hacks
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <ModeToggle />
-          </div>
+          <ModeToggle />
         </header>
 
         <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

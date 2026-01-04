@@ -29,7 +29,7 @@ export function LoanComparisonGraphs() {
         const originalSchedule = generateAmortizationSchedule(principal, interest, tenure, start, {});
 
         // Find crossover for actual
-        let actualCrossMonth = null;
+        let actualCrossMonth: number | null = null;
         const actualFormatted = actualSchedule
             .filter(p => p.principal > 0 || p.interest > 0)
             .map((p) => {
@@ -44,7 +44,7 @@ export function LoanComparisonGraphs() {
             });
 
         // Find crossover for original
-        let originalCrossMonth = null;
+        let originalCrossMonth: number | null = null;
         const originalFormatted = originalSchedule.map((p) => {
             if (originalCrossMonth === null && p.principal > p.interest) {
                 originalCrossMonth = p.month;
@@ -72,14 +72,14 @@ export function LoanComparisonGraphs() {
                 <div className="bg-background/95 backdrop-blur-sm border border-border p-3 rounded-lg shadow-xl text-xs space-y-2">
                     <p className="font-bold text-sm">Month {label}</p>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
                         <span className="text-muted-foreground">Principal:</span>
                         <span className="font-bold text-foreground">
                             {formatCurrency(payload[0].value)}
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                        <div className="w-2 h-2 rounded-full opacity-60 bg-primary"></div>
                         <span className="text-muted-foreground">Interest:</span>
                         <span className="font-bold text-foreground">
                             {formatCurrency(payload[1].value)}
@@ -91,58 +91,57 @@ export function LoanComparisonGraphs() {
         return null;
     };
 
-    const renderChart = (title: string, data: any[], crossover: number | null, colorRange: string) => (
-        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0">
-            <CardHeader className={`bg-gradient-to-r ${colorRange} border-b py-4`}>
-                <CardTitle className="text-lg font-bold text-foreground">
+    const renderChart = (title: string, data: any[], crossover: number | null) => (
+        <Card className="w-full">
+            <CardHeader className="border-b">
+                <CardTitle className="text-lg font-semibold">
                     {title}
                 </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                    Principal component vs Interest component over time
+                <p className="text-sm text-muted-foreground mt-1">
+                    Principal vs Interest over time
                 </p>
             </CardHeader>
-            <CardContent className="pt-6 pb-2">
+            <CardContent className="p-6">
                 <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
-                                <linearGradient id="colorPrincipal" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                <linearGradient id={`colorPrincipal-${title}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                                 </linearGradient>
-                                <linearGradient id="colorInterest" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                                <linearGradient id={`colorInterest-${title}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
                             <XAxis
                                 dataKey="month"
-                                tick={{ fontSize: 10 }}
+                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                                 tickLine={false}
                                 axisLine={false}
-                                label={{ value: 'Month', position: 'insideBottom', offset: -5, fontSize: 10 }}
                             />
                             <YAxis
-                                tick={{ fontSize: 10 }}
+                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                                 tickLine={false}
                                 axisLine={false}
                                 tickFormatter={(val) => `₹${val / 1000}k`}
                             />
                             <Tooltip content={<CustomTooltip />} />
-                            <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
+                            <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px', fontWeight: '500' }} />
 
                             {crossover && (
                                 <ReferenceLine
                                     x={crossover}
-                                    stroke="#ef4444"
+                                    stroke="var(--primary)"
                                     strokeDasharray="5 5"
                                     label={{
-                                        value: `PA > Interest @ Month ${crossover}`,
+                                        value: `PA > INT @ ${crossover}`,
                                         position: 'top',
-                                        fill: '#ef4444',
+                                        fill: 'var(--primary)',
                                         fontSize: 10,
-                                        fontWeight: 'bold'
+                                        fontWeight: '600'
                                     }}
                                 />
                             )}
@@ -150,19 +149,20 @@ export function LoanComparisonGraphs() {
                             <Area
                                 type="monotone"
                                 dataKey="principal"
-                                stroke="#3b82f6"
-                                name="Principal Amount"
+                                stroke="var(--primary)"
+                                name="Principal"
                                 fillOpacity={1}
-                                fill="url(#colorPrincipal)"
+                                fill={`url(#colorPrincipal-${title})`}
                                 strokeWidth={2}
                             />
                             <Area
                                 type="monotone"
                                 dataKey="interest"
-                                stroke="#f97316"
-                                name="Interest Component"
+                                stroke="var(--primary)"
+                                strokeOpacity={0.3}
+                                name="Interest"
                                 fillOpacity={1}
-                                fill="url(#colorInterest)"
+                                fill={`url(#colorInterest-${title})`}
                                 strokeWidth={2}
                             />
                         </AreaChart>
@@ -173,19 +173,9 @@ export function LoanComparisonGraphs() {
     );
 
     return (
-        <div className="w-full space-y-8">
-            {renderChart(
-                "Actual Loan Trajectory (With Part Payments)",
-                actualData,
-                crossoverPointActual,
-                "from-emerald-500/10 via-teal-500/10 to-cyan-500/10"
-            )}
-            {renderChart(
-                "Original Loan Trajectory",
-                originalData,
-                crossoverPointOriginal,
-                "from-slate-500/10 via-gray-500/10 to-zinc-500/10"
-            )}
+        <div className="grid grid-cols-1 gap-6">
+            {renderChart("Performance Projection", actualData, crossoverPointActual)}
+            {renderChart("Original Schedule", originalData, crossoverPointOriginal)}
         </div>
     );
 }
