@@ -69,10 +69,10 @@ export function LoanSummary() {
         // Calculate payoff dates
         const startDate = emiStartDate ? new Date(emiStartDate) : new Date();
         const projectedPayoffDate = new Date(startDate);
-        projectedPayoffDate.setMonth(projectedPayoffDate.getMonth() + lastPaidMonth + estimatedRemainingMonths);
+        projectedPayoffDate.setMonth(projectedPayoffDate.getMonth() + lastPaidMonth + estimatedRemainingMonths - 1);
 
         const originalPayoffDate = new Date(startDate);
-        originalPayoffDate.setMonth(originalPayoffDate.getMonth() + tenure);
+        originalPayoffDate.setMonth(originalPayoffDate.getMonth() + tenure - 1);
 
         return {
             totalEmisPaid,
@@ -120,9 +120,9 @@ export function LoanSummary() {
     const interestPercentage = totalAmountPaid > 0 ? (totalInterestPaid / totalAmountPaid) * 100 : 0;
 
     return (
-        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-rose-500/10 border-b pb-4">
-                <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-rose-600 bg-clip-text text-transparent">
+        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0">
+            <CardHeader className="bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-cyan-500/10 border-b py-4">
+                <CardTitle className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
                     Loan Summary
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">

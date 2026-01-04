@@ -88,10 +88,17 @@ export function LoanConfiguration() {
     };
 
     return (
-        <Card className="w-full">
-            <CardHeader>
+        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0">
+            <CardHeader className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border-b py-4">
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-2xl font-bold">Loan Configuration</CardTitle>
+                    <div>
+                        <CardTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            Loan Configuration
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Set your loan parameters
+                        </p>
+                    </div>
                     {isLoading && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -100,15 +107,15 @@ export function LoanConfiguration() {
                     )}
                 </div>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="p-6 space-y-6">
                 {/* Principal Amount */}
-                <div className="space-y-4">
+                <div className="group p-4 rounded-xl bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-100 dark:border-blue-900/50 hover:shadow-md transition-all duration-300 space-y-4">
                     <div className="flex items-center justify-between gap-4">
-                        <Label htmlFor="principal" className="text-sm font-medium whitespace-nowrap">
+                        <Label htmlFor="principal" className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                             Principal Amount
                         </Label>
                         <div className="relative w-48">
-                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-blue-500 rounded-md">
+                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-blue-500 rounded-md shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
                                 <IndianRupee className="w-3 h-3 text-white" />
                             </div>
                             <Input
@@ -116,7 +123,7 @@ export function LoanConfiguration() {
                                 type="number"
                                 value={principal}
                                 onChange={handlePrincipalChange}
-                                className="pl-10 text-right font-semibold"
+                                className="pl-10 text-right font-bold bg-white/50 dark:bg-gray-800/50 border-blue-200 dark:border-blue-800 focus:ring-blue-500"
                                 min="0"
                                 max={100000000}
                                 step="10000"
@@ -132,19 +139,19 @@ export function LoanConfiguration() {
                         showTooltip
                         formatTooltip={formatCompactCurrency}
                     />
-                    <p className="text-xs text-muted-foreground text-right">
+                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400 text-right">
                         {formatCurrency(principal)}
                     </p>
                 </div>
 
                 {/* Interest Rate */}
-                <div className="space-y-4">
+                <div className="group p-4 rounded-xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-100 dark:border-indigo-900/50 hover:shadow-md transition-all duration-300 space-y-4">
                     <div className="flex items-center justify-between gap-4">
-                        <Label htmlFor="interest" className="text-sm font-medium whitespace-nowrap">
+                        <Label htmlFor="interest" className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">
                             Interest Rate
                         </Label>
                         <div className="relative w-48">
-                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-blue-500 rounded-md">
+                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-indigo-500 rounded-md shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
                                 <Percent className="w-3 h-3 text-white" />
                             </div>
                             <Input
@@ -152,7 +159,7 @@ export function LoanConfiguration() {
                                 type="number"
                                 value={interest}
                                 onChange={handleInterestChange}
-                                className="pl-10 text-right font-semibold"
+                                className="pl-10 text-right font-bold bg-white/50 dark:bg-gray-800/50 border-indigo-200 dark:border-indigo-800 focus:ring-indigo-500"
                                 min="0"
                                 max="30"
                                 step="0.1"
@@ -168,17 +175,17 @@ export function LoanConfiguration() {
                         showTooltip
                         formatTooltip={(v) => `${v}%`}
                     />
-                    <p className="text-xs text-muted-foreground text-right">{interest}% per annum</p>
+                    <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 text-right">{interest}% per annum</p>
                 </div>
 
                 {/* Loan Tenure */}
-                <div className="space-y-4">
+                <div className="group p-4 rounded-xl bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-950/20 dark:to-pink-950/20 border border-purple-100 dark:border-purple-900/50 hover:shadow-md transition-all duration-300 space-y-4">
                     <div className="flex items-center justify-between gap-4">
-                        <Label htmlFor="tenure" className="text-sm font-medium whitespace-nowrap">
+                        <Label htmlFor="tenure" className="text-sm font-semibold text-purple-900 dark:text-purple-100">
                             Loan Tenure (Years)
                         </Label>
                         <div className="relative w-48">
-                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-blue-500 rounded-md">
+                            <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-purple-500 rounded-md shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform duration-300">
                                 <Calendar className="w-3 h-3 text-white" />
                             </div>
                             <Input
@@ -186,7 +193,7 @@ export function LoanConfiguration() {
                                 type="number"
                                 value={tenureYears}
                                 onChange={handleTenureYearChange}
-                                className="pl-10 text-right font-semibold"
+                                className="pl-10 text-right font-bold bg-white/50 dark:bg-gray-800/50 border-purple-200 dark:border-purple-800 focus:ring-purple-500"
                                 min="1"
                                 max={30}
                                 step="1"
@@ -203,7 +210,7 @@ export function LoanConfiguration() {
                         showTooltip
                         formatTooltip={(v) => `${v} Years`}
                     />
-                    <p className="text-xs text-muted-foreground text-right">
+                    <p className="text-xs font-medium text-purple-600 dark:text-purple-400 text-right">
                         {tenureYears} years ({tenure} months)
                     </p>
                 </div>

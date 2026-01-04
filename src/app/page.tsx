@@ -5,6 +5,7 @@ import { LoanConfiguration } from "@/components/LoanConfiguration"
 import { LoanSummary } from "@/components/LoanSummary"
 import { LoanOverview } from "@/components/LoanOverview"
 import { AmortizationSchedule } from "@/components/AmortizationSchedule"
+import { LoanComparisonGraphs } from "@/components/LoanComparisonGraphs"
 import { useLoanConfigStore } from "@/store/loan-config-store"
 import { useEffect, useRef } from "react"
 import { MonitorPlay } from "lucide-react"
@@ -70,6 +71,7 @@ export default function Home() {
           <div className="lg:col-span-8 space-y-8">
             <LoanOverview />
             <AmortizationSchedule />
+            <LoanComparisonGraphs />
           </div>
 
         </div>

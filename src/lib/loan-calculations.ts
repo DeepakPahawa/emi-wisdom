@@ -131,7 +131,7 @@ export function calculateLoanSummary(
 
     // Calculate payoff date
     const payoffDate = new Date(startDate);
-    payoffDate.setMonth(payoffDate.getMonth() + months);
+    payoffDate.setMonth(payoffDate.getMonth() + months - 1);
 
     return {
         emi: Math.round(emi * 100) / 100,
