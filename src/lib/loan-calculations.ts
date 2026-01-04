@@ -134,6 +134,7 @@ export interface FullLoanSummary {
     originalPayoffDate: Date;
     estimatedRemainingMonths: number;
     actualMonthsPaid: number;
+    actualTotalMonths: number;
     originalEmi: number;
 }
 
@@ -182,6 +183,10 @@ export function calculateComprehensiveSummary(
     const timeSavedMonths = Math.max(0, originalRemainingMonths - estimatedRemainingMonths);
     const projectedTotalInterest = actualSchedule.reduce((sum, p) => sum + p.interest, 0);
 
+    // Calculate actual total months (last month with any payment activity)
+    const lastMonthWithPayment = [...actualSchedule].reverse().find(p => p.principal > 0 || p.interest > 0 || p.emi > 0);
+    const actualTotalMonths = lastMonthWithPayment ? lastMonthWithPayment.month : tenure;
+
     const projectedPayoffDate = new Date(startDate);
     projectedPayoffDate.setMonth(projectedPayoffDate.getMonth() + lastPaidMonth + estimatedRemainingMonths - 1);
 
@@ -206,6 +211,7 @@ export function calculateComprehensiveSummary(
         originalPayoffDate,
         estimatedRemainingMonths,
         actualMonthsPaid: lastPaidMonth,
+        actualTotalMonths,
         originalEmi,
     };
 }

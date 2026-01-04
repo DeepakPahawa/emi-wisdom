@@ -44,7 +44,7 @@ export default function Home() {
       enableSystem
       disableTransitionOnChange
     >
-      <main className="min-h-screen p-4 md:p-8 flex flex-col items-center gap-8 transition-colors duration-300">
+      <main className="min-h-screen p-4 md:p-8 flex flex-col items-center gap-4 transition-colors duration-300">
         {/* Header */}
         <header className="w-full max-w-7xl flex justify-between items-center px-2">
           <div className="flex items-center gap-3">
@@ -58,16 +58,16 @@ export default function Home() {
           <ModeToggle />
         </header>
 
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
           {/* Left Column: Loan Configuration (4 cols) */}
-          <div className="lg:col-span-4 space-y-6" id="left-column-container">
+          <div className="lg:col-span-4 space-y-4" id="left-column-container">
             <LoanConfiguration />
             <LoanSummary />
           </div>
 
           {/* Right Column: Loan Overview and EMI Schedule (8 cols) */}
-          <div className="lg:col-span-8 space-y-8">
+          <div className="lg:col-span-8 space-y-4">
             <LoanOverview />
             <LoanImpactCard />
             <AmortizationSchedule />

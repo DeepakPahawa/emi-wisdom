@@ -38,13 +38,13 @@ export function LoanOverview() {
 
     return (
         <Card className="w-full">
-            <CardHeader className="border-b">
+            <CardHeader className="py-1 px-4 border-b">
                 <CardTitle className="text-lg font-semibold">
                     Loan Overview
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-                <div className="grid grid-cols-2 gap-6">
+            <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-4">
                     {/* Loan Amount */}
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase font-medium">Loan Amount</p>
@@ -79,7 +79,7 @@ export function LoanOverview() {
                 </div>
 
                 {/* Simple Cost Breakdown */}
-                <div className="mt-8 space-y-3">
+                <div className="mt-4 space-y-2">
                     <div className="flex justify-between items-center">
                         <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Breakdown</h4>
                     </div>

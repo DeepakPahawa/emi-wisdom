@@ -97,16 +97,16 @@ export function LoanComparisonGraphs() {
 
     const renderChart = (title: string, data: any[], crossover: number | null) => (
         <Card className="w-full">
-            <CardHeader className="border-b">
+            <CardHeader className="py-1 px-4 border-b">
                 <CardTitle className="text-lg font-semibold">
                     {title}
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-[11px] text-muted-foreground">
                     Principal vs Interest over time
                 </p>
             </CardHeader>
-            <CardContent className="p-6">
-                <div className="h-[300px] w-full">
+            <CardContent className="p-4">
+                <div className="h-[250px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
@@ -176,8 +176,8 @@ export function LoanComparisonGraphs() {
     );
 
     return (
-        <div className="grid grid-cols-1 gap-6">
-            {renderChart("Performance Projection", actualData, crossoverPointActual)}
+        <div className="grid grid-cols-1 gap-4">
+            {renderChart("Part Payment Impact", actualData, crossoverPointActual)}
             {renderChart("Original Schedule", originalData, crossoverPointOriginal)}
         </div>
     );

@@ -89,13 +89,13 @@ export function LoanConfiguration() {
 
     return (
         <Card className="w-full">
-            <CardHeader className="border-b">
+            <CardHeader className="py-1 px-4 border-b">
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-lg font-semibold">
                             Loan Settings
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-[11px] text-muted-foreground">
                             Adjust your loan parameters
                         </p>
                     </div>
@@ -107,10 +107,10 @@ export function LoanConfiguration() {
                     )}
                 </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-                <div className="grid gap-6">
+            <CardContent className="p-4 space-y-4">
+                <div className="grid gap-4">
                     {/* Principal Amount */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="principal" className="text-sm font-medium">
                                 Principal Amount
@@ -146,7 +146,7 @@ export function LoanConfiguration() {
                     </div>
 
                     {/* Interest Rate */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="interest" className="text-sm font-medium">
                                 Interest Rate
@@ -180,7 +180,7 @@ export function LoanConfiguration() {
                     </div>
 
                     {/* Loan Tenure */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="tenure" className="text-sm font-medium">
                                 Tenure (Years)

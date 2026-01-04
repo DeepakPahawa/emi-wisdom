@@ -46,7 +46,7 @@ export function LoanImpactCard() {
         };
     }, [summaryData]);
 
-    if (!impact) return null;
+    if (!impact) return <p className="text-sm md:text-lg font-bold tracking-tight text-foreground/90 leading-tight text-center"><UnderscoredValue colorClass="text-part-payment" text={"Add EMI & Part Payments to see the magic"} /></p>
 
     return (
         <AnimatePresence>
@@ -56,8 +56,8 @@ export function LoanImpactCard() {
                 exit={{ opacity: 0, y: 10 }}
                 className="w-full"
             >
-                <Card className="overflow-hidden border border-part-payment/20 bg-gradient-to-r from-part-payment/10 via-part-payment/5 to-transparent relative group shadow-sm py-2">
-                    <CardContent className="p-3 md:p-4">
+                <Card className="overflow-hidden border border-part-payment/20 bg-gradient-to-r from-part-payment/10 via-part-payment/5 to-transparent relative group shadow-sm py-1">
+                    <CardContent className="p-2 md:p-3">
                         <div className="flex items-center gap-4">
                             <div className="flex-shrink-0">
                                 <motion.div

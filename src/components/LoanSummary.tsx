@@ -33,6 +33,7 @@ export function LoanSummary() {
         originalPayoffDate,
         estimatedRemainingMonths,
         actualMonthsPaid,
+        actualTotalMonths,
         originalEmi,
     } = summaryData;
 
@@ -40,24 +41,24 @@ export function LoanSummary() {
     const interestPercentage = totalAmountPaid > 0 ? (totalInterestPaid / totalAmountPaid) * 100 : 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <Card className="w-full">
-                <CardHeader className="border-b">
+                <CardHeader className="py-1 px-4 border-b">
                     <CardTitle className="text-lg font-semibold">
                         Loan Summary
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-[11px] text-muted-foreground">
                         Track your progress and savings
                     </p>
                 </CardHeader>
-                <CardContent className="p-6 space-y-6">
+                <CardContent className="p-4 space-y-4">
 
                     {/* EMI Payment Progress */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-medium">EMI Payment Progress</h3>
                             <span className="text-sm font-semibold text-primary">
-                                {totalEmisPaid} / {tenure}
+                                {totalEmisPaid} / {actualTotalMonths}
                             </span>
                         </div>
                         <div className="space-y-2">
@@ -74,7 +75,7 @@ export function LoanSummary() {
                     </div>
 
                     {/* Principal vs Interest Breakdown */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <h3 className="text-sm font-medium">Payment Breakdown</h3>
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
@@ -135,7 +136,7 @@ export function LoanSummary() {
                     </AnimatePresence>
 
                     {/* Key Metrics Grid */}
-                    <div className="pt-4 border-t grid grid-cols-2 gap-6">
+                    <div className="pt-3 border-t grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <p className="text-[10px] text-muted-foreground uppercase font-medium">Total Paid</p>
                             <p className="font-semibold">{formatCurrency(totalAmountPaid)}</p>
@@ -156,7 +157,7 @@ export function LoanSummary() {
 
                     {/* Payoff Comparison */}
                     {totalPartPayments > 0 && (
-                        <div className="pt-4 border-t grid grid-cols-2 gap-4">
+                        <div className="pt-3 border-t grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <p className="text-[10px] text-muted-foreground uppercase font-medium">Original Payoff</p>
                                 <p className="text-sm font-medium">{formatDate(originalPayoffDate)}</p>
