@@ -64,12 +64,12 @@ export default function Home() {
           <div className="lg:col-span-4 space-y-6" id="left-column-container">
             <LoanConfiguration />
             <LoanSummary />
-            <LoanImpactCard />
           </div>
 
           {/* Right Column: Loan Overview and EMI Schedule (8 cols) */}
           <div className="lg:col-span-8 space-y-8">
             <LoanOverview />
+            <LoanImpactCard />
             <AmortizationSchedule />
             <LoanComparisonGraphs />
           </div>

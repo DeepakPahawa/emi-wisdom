@@ -5,7 +5,28 @@ import { useLoanConfigStore } from "@/store/loan-config-store";
 import { generateAmortizationSchedule, formatCompactCurrency } from "@/lib/loan-calculations";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingDown, Calendar, Sparkles } from "lucide-react";
+import { TrendingDown, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const UnderscoredValue = ({ colorClass, text }: { colorClass: string, text: string }) => (
+    <span className="relative inline-flex whitespace-nowrap">
+        <span className={cn("font-extrabold tracking-tight relative z-10 px-0.5", colorClass)}>
+            {text}
+        </span>
+        <motion.span
+            className={cn("absolute -bottom-0.5 left-0 w-full h-[2.5px] rounded-full opacity-60", colorClass.replace('text-', 'bg-'))}
+            style={{ originX: 0 }}
+            animate={{ scaleX: [0, 1] }}
+            transition={{
+                duration: 1.8,
+                repeat: Infinity,
+                repeatType: "loop",
+                ease: "easeInOut",
+                repeatDelay: 0.3
+            }}
+        />
+    </span>
+);
 
 export function LoanImpactCard() {
     const { principal, interest, tenure, isInitialized, emiStartDate, transactions } = useLoanConfigStore();
@@ -18,26 +39,21 @@ export function LoanImpactCard() {
         const actualSchedule = generateAmortizationSchedule(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : new Date(), transactions);
         const originalSchedule = generateAmortizationSchedule(principal, interest, tenure);
 
-        // Find last month where a payment was recorded
         const paidMonthNumbers = Object.keys(transactions)
             .map(Number)
             .filter(m => transactions[m].paidEmi > 0)
             .sort((a, b) => a - b);
         const lastPaidMonth = paidMonthNumbers.length > 0 ? Math.max(...paidMonthNumbers) : 0;
 
-        // Estimated remaining months in actual schedule
         const estimatedRemainingMonths = actualSchedule.filter((p, i) => i >= lastPaidMonth && p.balance > 0 || (i >= lastPaidMonth && i < tenure && p.emi > 0)).length;
 
-        // Time saved
         const originalRemainingMonths = tenure - lastPaidMonth;
         const timeSavedMonths = Math.max(0, originalRemainingMonths - estimatedRemainingMonths);
 
-        // Interest saved
         const originalTotalInterest = originalSchedule.reduce((sum, p) => sum + p.interest, 0);
         const projectedTotalInterest = actualSchedule.reduce((sum, p) => sum + p.interest, 0);
         const interestSaved = originalTotalInterest - projectedTotalInterest;
 
-        // Only show if there's an actual impact
         const totalPartPayments = Object.values(transactions).reduce((sum, t) => sum + (t.partPayment || 0), 0);
         if (totalPartPayments <= 0 || (timeSavedMonths <= 0 && interestSaved <= 0)) {
             return null;
@@ -54,49 +70,44 @@ export function LoanImpactCard() {
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="w-full"
             >
-                <Card className="overflow-hidden border-none bg-gradient-to-br from-part-payment/10 via-part-payment/5 to-transparent relative">
-                    <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                        <Sparkles className="w-12 h-12 text-part-payment" />
-                    </div>
-                    <CardContent className="p-6">
-                        <div className="flex flex-col gap-4">
-                            <div className="flex items-center gap-2">
-                                <div className="p-2 bg-part-payment/20 rounded-full">
-                                    <Sparkles className="w-4 h-4 text-part-payment animate-pulse" />
-                                </div>
-                                <h3 className="text-sm font-bold uppercase tracking-widest text-part-payment/80">
-                                    Impact of Part Payments
-                                </h3>
+                <Card className="overflow-hidden border border-part-payment/20 bg-gradient-to-r from-part-payment/10 via-part-payment/5 to-transparent relative group shadow-sm py-2">
+                    <CardContent className="p-3 md:p-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex-shrink-0">
+                                <motion.div
+                                    className="flex items-center justify-center w-12 h-12 rounded-xl bg-part-payment/10 border border-part-payment/20 relative"
+                                    animate={{
+                                        boxShadow: ["0 0 0px rgba(34, 197, 94, 0)", "0 0 10px rgba(34, 197, 94, 0.1)", "0 0 0px rgba(34, 197, 94, 0)"]
+                                    }}
+                                    transition={{ duration: 4, repeat: Infinity }}
+                                >
+                                    <TrendingDown className="w-6 h-6 text-part-payment" />
+                                    <div className="absolute -top-1.5 -right-1.5 bg-part-payment text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
+                                        SAVED
+                                    </div>
+                                </motion.div>
                             </div>
 
-                            <p className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-tight">
-                                Due to extra part payments, you have reduced your tenure by{" "}
-                                <span className="text-part-payment inline-flex items-center gap-1.5 px-2 py-0.5 bg-part-payment/10 rounded-md border border-part-payment/20">
-                                    <Calendar className="w-5 h-5" />
-                                    {impact.timeSavedMonths} {impact.timeSavedMonths === 1 ? 'month' : 'months'}
-                                </span>{" "}
-                                and saved{" "}
-                                <span className="text-part-payment inline-flex items-center gap-1.5 px-2 py-0.5 bg-part-payment/10 rounded-md border border-part-payment/20">
-                                    <TrendingDown className="w-5 h-5" />
-                                    {formatCompactCurrency(Math.max(0, impact.interestSaved))}
-                                </span>{" "}
-                                in interest!
-                            </p>
-
-                            <div className="flex items-center gap-2 mt-2">
-                                <div className="h-1 flex-grow bg-part-payment/20 rounded-full overflow-hidden">
-                                    <motion.div
-                                        className="h-full bg-part-payment"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: "100%" }}
-                                        transition={{ duration: 1.5, delay: 0.5 }}
-                                    />
+                            <div className="flex-grow">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <Sparkles className="w-3 h-3 text-part-payment/60" />
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-part-payment/70">
+                                        Impact
+                                    </h3>
                                 </div>
+
+                                <p className="text-sm md:text-lg font-bold tracking-tight text-foreground/90 leading-tight">
+                                    Reduced tenure by{" "}
+                                    <UnderscoredValue colorClass="text-part-payment" text={`${impact.timeSavedMonths} ${impact.timeSavedMonths === 1 ? 'month' : 'months'}`} />
+                                    {" "}and saved{" "}
+                                    <UnderscoredValue colorClass="text-part-payment" text={formatCompactCurrency(Math.max(0, impact.interestSaved))} />
+                                    {" "}interest!
+                                </p>
                             </div>
                         </div>
                     </CardContent>
