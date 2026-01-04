@@ -2,12 +2,12 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useLoanConfigStore } from "@/store/loan-config-store";
-import { calculateLoanSummary, formatCurrency, formatDate } from "@/lib/loan-calculations";
+import { calculateComprehensiveSummary, formatCurrency, formatDate } from "@/lib/loan-calculations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IndianRupee, TrendingUp, Calendar, Percent } from "lucide-react";
 
 export function LoanOverview() {
-    const { principal, interest, tenure, isInitialized } = useLoanConfigStore();
+    const { principal, interest, tenure, isInitialized, emiStartDate, transactions } = useLoanConfigStore();
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
@@ -15,11 +15,8 @@ export function LoanOverview() {
     }, []);
 
     const summary = useMemo(() => {
-        if (!isInitialized || principal <= 0 || interest <= 0 || tenure <= 0) {
-            return null;
-        }
-        return calculateLoanSummary(principal, interest, tenure);
-    }, [principal, interest, tenure, isInitialized]);
+        return calculateComprehensiveSummary(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : null, transactions);
+    }, [principal, interest, tenure, isInitialized, emiStartDate, transactions]);
 
     if (!summary) {
         return (
@@ -36,8 +33,8 @@ export function LoanOverview() {
         );
     }
 
-    const interestPercentage = (summary.totalInterest / summary.totalCost) * 100;
-    const principalPercentage = (principal / summary.totalCost) * 100;
+    const interestPercentage = (summary.projectedTotalInterest / summary.projectedTotalCost) * 100;
+    const principalPercentage = (principal / summary.projectedTotalCost) * 100;
 
     return (
         <Card className="w-full">
@@ -60,7 +57,7 @@ export function LoanOverview() {
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase font-medium">Total Interest</p>
                         <p className="text-xl font-bold tracking-tight text-interest">
-                            {formatCurrency(summary.totalInterest)}
+                            {formatCurrency(summary.projectedTotalInterest)}
                         </p>
                     </div>
 
@@ -68,7 +65,7 @@ export function LoanOverview() {
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase font-medium">Total Cost</p>
                         <p className="text-xl font-bold tracking-tight">
-                            {formatCurrency(summary.totalCost)}
+                            {formatCurrency(summary.projectedTotalCost)}
                         </p>
                     </div>
 
@@ -76,7 +73,7 @@ export function LoanOverview() {
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase font-medium">Payoff Date</p>
                         <p className="text-xl font-bold tracking-tight text-primary">
-                            {isMounted ? formatDate(summary.payoffDate) : "Loading..."}
+                            {isMounted ? formatDate(summary.projectedPayoffDate) : "Loading..."}
                         </p>
                     </div>
                 </div>

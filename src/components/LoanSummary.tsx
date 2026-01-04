@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useLoanConfigStore } from "@/store/loan-config-store";
-import { generateAmortizationSchedule, formatCurrency, formatDate } from "@/lib/loan-calculations";
+import { calculateComprehensiveSummary, formatCurrency, formatDate } from "@/lib/loan-calculations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Calendar, DollarSign, PiggyBank, Zap, CheckCircle2, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,88 +11,7 @@ export function LoanSummary() {
     const { principal, interest, tenure, isInitialized, emiStartDate, transactions } = useLoanConfigStore();
 
     const summaryData = useMemo(() => {
-        if (!isInitialized || principal <= 0 || interest <= 0 || tenure <= 0) {
-            return null;
-        }
-
-        const actualSchedule = generateAmortizationSchedule(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : new Date(), transactions);
-        const originalSchedule = generateAmortizationSchedule(principal, interest, tenure);
-
-        // Calculate total EMIs paid (where user has recorded a payment)
-        const totalEmisPaid = Object.values(transactions).filter(t => t.paidEmi > 0).length;
-        const emiPaymentProgress = (totalEmisPaid / tenure) * 100;
-
-        // Calculate total part payments made
-        const totalPartPayments = Object.values(transactions).reduce((sum, t) => sum + (t.partPayment || 0), 0);
-
-        // Find the index of the last month where a payment was recorded
-        // We use month numbers (1-indexed) in our transactions record
-        const paidMonthNumbers = Object.keys(transactions)
-            .map(Number)
-            .filter(m => transactions[m].paidEmi > 0)
-            .sort((a, b) => a - b);
-
-        const lastPaidMonth = paidMonthNumbers.length > 0 ? Math.max(...paidMonthNumbers) : 0;
-        const actualMonthsPaid = lastPaidMonth;
-
-        // Calculate metrics based on the actual schedule
-        let totalPrincipalPaid = 0;
-        let totalInterestPaid = 0;
-
-        for (let i = 0; i < lastPaidMonth; i++) {
-            totalPrincipalPaid += actualSchedule[i].principal;
-            totalInterestPaid += actualSchedule[i].interest;
-        }
-
-        // Remaining balance is the balance after the last recorded payment
-        const remainingBalance = lastPaidMonth > 0 ? actualSchedule[lastPaidMonth - 1].balance : principal;
-
-        // Total amount paid so far (EMIs + Part Payments)
-        const totalAmountPaid = totalPrincipalPaid + totalInterestPaid;
-
-        // Calculate original total cost and interest (from original schedule)
-        const originalTotalInterest = originalSchedule.reduce((sum, p) => sum + p.interest, 0);
-        const originalTotalCost = principal + originalTotalInterest;
-        const originalEmi = originalSchedule[0]?.emi || 0;
-
-        // Calculate estimated remaining months
-        // Count months in actualSchedule that have balance > 0 and are after the last paid month
-        const estimatedRemainingMonths = actualSchedule.filter((p, i) => i >= lastPaidMonth && p.balance > 0 || (i >= lastPaidMonth && i < tenure && p.emi > 0)).length;
-
-        // Time saved calculation
-        const originalRemainingMonths = tenure - lastPaidMonth;
-        const timeSavedMonths = Math.max(0, originalRemainingMonths - estimatedRemainingMonths);
-
-        // Projected interest vs original interest
-        const projectedTotalInterest = actualSchedule.reduce((sum, p) => sum + p.interest, 0);
-        const interestSaved = originalTotalInterest - projectedTotalInterest;
-
-        // Calculate payoff dates
-        const startDate = emiStartDate ? new Date(emiStartDate) : new Date();
-        const projectedPayoffDate = new Date(startDate);
-        projectedPayoffDate.setMonth(projectedPayoffDate.getMonth() + lastPaidMonth + estimatedRemainingMonths - 1);
-
-        const originalPayoffDate = new Date(startDate);
-        originalPayoffDate.setMonth(originalPayoffDate.getMonth() + tenure - 1);
-
-        return {
-            totalEmisPaid,
-            emiPaymentProgress,
-            totalPartPayments,
-            totalPrincipalPaid,
-            totalInterestPaid,
-            remainingBalance,
-            totalAmountPaid,
-            originalTotalCost,
-            originalTotalInterest,
-            timeSavedMonths,
-            interestSaved,
-            projectedPayoffDate,
-            originalPayoffDate,
-            estimatedRemainingMonths,
-            actualMonthsPaid,
-            originalEmi,
-        };
+        return calculateComprehensiveSummary(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : null, transactions);
     }, [principal, interest, tenure, isInitialized, emiStartDate, transactions]);
 
     if (!summaryData) {

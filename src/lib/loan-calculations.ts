@@ -116,28 +116,97 @@ export function generateAmortizationSchedule(
     return schedule;
 }
 
-/**
- * Calculate loan summary including total interest and total cost
- */
-export function calculateLoanSummary(
-    principal: number,
-    annualRate: number,
-    months: number,
-    startDate: Date = new Date()
-): LoanSummary {
-    const emi = calculateEMI(principal, annualRate, months);
-    const totalCost = emi * months;
-    const totalInterest = totalCost - principal;
+export interface FullLoanSummary {
+    totalEmisPaid: number;
+    emiPaymentProgress: number;
+    totalPartPayments: number;
+    totalPrincipalPaid: number;
+    totalInterestPaid: number;
+    remainingBalance: number;
+    totalAmountPaid: number;
+    originalTotalCost: number;
+    originalTotalInterest: number;
+    timeSavedMonths: number;
+    interestSaved: number;
+    projectedTotalInterest: number;
+    projectedTotalCost: number;
+    projectedPayoffDate: Date;
+    originalPayoffDate: Date;
+    estimatedRemainingMonths: number;
+    actualMonthsPaid: number;
+    originalEmi: number;
+}
 
-    // Calculate payoff date
-    const payoffDate = new Date(startDate);
-    payoffDate.setMonth(payoffDate.getMonth() + months - 1);
+/**
+ * Calculate comprehensive loan metrics considering transactions and part payments
+ */
+export function calculateComprehensiveSummary(
+    principal: number,
+    interest: number,
+    tenure: number,
+    emiStartDate: Date | null,
+    transactions: Record<number, { paidEmi: number; partPayment: number }>
+): FullLoanSummary | null {
+    if (principal <= 0 || interest <= 0 || tenure <= 0) {
+        return null;
+    }
+
+    const startDate = emiStartDate || new Date();
+    const actualSchedule = generateAmortizationSchedule(principal, interest, tenure, startDate, transactions);
+    const originalSchedule = generateAmortizationSchedule(principal, interest, tenure);
+
+    const paidMonthNumbers = Object.keys(transactions)
+        .map(Number)
+        .filter(m => transactions[m].paidEmi > 0)
+        .sort((a, b) => a - b);
+
+    const lastPaidMonth = paidMonthNumbers.length > 0 ? Math.max(...paidMonthNumbers) : 0;
+
+    let totalPrincipalPaid = 0;
+    let totalInterestPaid = 0;
+
+    for (let i = 0; i < lastPaidMonth; i++) {
+        totalPrincipalPaid += actualSchedule[i].principal;
+        totalInterestPaid += actualSchedule[i].interest;
+    }
+
+    const remainingBalance = lastPaidMonth > 0 ? actualSchedule[lastPaidMonth - 1].balance : principal;
+    const originalTotalInterest = originalSchedule.reduce((sum, p) => sum + p.interest, 0);
+    const originalEmi = originalSchedule[0]?.emi || 0;
+
+    const estimatedRemainingMonths = actualSchedule.filter((p, i) =>
+        (i >= lastPaidMonth && p.balance > 0) || (i >= lastPaidMonth && i < tenure && p.emi > 0)
+    ).length;
+
+    const originalRemainingMonths = tenure - lastPaidMonth;
+    const timeSavedMonths = Math.max(0, originalRemainingMonths - estimatedRemainingMonths);
+    const projectedTotalInterest = actualSchedule.reduce((sum, p) => sum + p.interest, 0);
+
+    const projectedPayoffDate = new Date(startDate);
+    projectedPayoffDate.setMonth(projectedPayoffDate.getMonth() + lastPaidMonth + estimatedRemainingMonths - 1);
+
+    const originalPayoffDate = new Date(startDate);
+    originalPayoffDate.setMonth(originalPayoffDate.getMonth() + tenure - 1);
 
     return {
-        emi: Math.round(emi * 100) / 100,
-        totalInterest: Math.round(totalInterest * 100) / 100,
-        totalCost: Math.round(totalCost * 100) / 100,
-        payoffDate,
+        totalEmisPaid: paidMonthNumbers.length,
+        emiPaymentProgress: (paidMonthNumbers.length / tenure) * 100,
+        totalPartPayments: Object.values(transactions).reduce((sum, t) => sum + (t.partPayment || 0), 0),
+        totalPrincipalPaid,
+        totalInterestPaid,
+        remainingBalance,
+        totalAmountPaid: totalPrincipalPaid + totalInterestPaid,
+        originalTotalCost: principal + originalTotalInterest,
+        originalTotalInterest,
+        timeSavedMonths,
+        interestSaved: originalTotalInterest - projectedTotalInterest,
+        projectedTotalInterest,
+        projectedTotalCost: principal + projectedTotalInterest,
+        projectedPayoffDate,
+        originalPayoffDate,
+        estimatedRemainingMonths,
+        actualMonthsPaid: lastPaidMonth,
+        originalEmi,
     };
 }
 

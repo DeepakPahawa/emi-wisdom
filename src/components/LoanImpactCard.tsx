@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useLoanConfigStore } from "@/store/loan-config-store";
-import { generateAmortizationSchedule, formatCompactCurrency } from "@/lib/loan-calculations";
+import { calculateComprehensiveSummary, formatCompactCurrency } from "@/lib/loan-calculations";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingDown, Sparkles } from "lucide-react";
@@ -31,39 +31,20 @@ const UnderscoredValue = ({ colorClass, text }: { colorClass: string, text: stri
 export function LoanImpactCard() {
     const { principal, interest, tenure, isInitialized, emiStartDate, transactions } = useLoanConfigStore();
 
-    const impact = useMemo(() => {
-        if (!isInitialized || principal <= 0 || interest <= 0 || tenure <= 0) {
-            return null;
-        }
-
-        const actualSchedule = generateAmortizationSchedule(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : new Date(), transactions);
-        const originalSchedule = generateAmortizationSchedule(principal, interest, tenure);
-
-        const paidMonthNumbers = Object.keys(transactions)
-            .map(Number)
-            .filter(m => transactions[m].paidEmi > 0)
-            .sort((a, b) => a - b);
-        const lastPaidMonth = paidMonthNumbers.length > 0 ? Math.max(...paidMonthNumbers) : 0;
-
-        const estimatedRemainingMonths = actualSchedule.filter((p, i) => i >= lastPaidMonth && p.balance > 0 || (i >= lastPaidMonth && i < tenure && p.emi > 0)).length;
-
-        const originalRemainingMonths = tenure - lastPaidMonth;
-        const timeSavedMonths = Math.max(0, originalRemainingMonths - estimatedRemainingMonths);
-
-        const originalTotalInterest = originalSchedule.reduce((sum, p) => sum + p.interest, 0);
-        const projectedTotalInterest = actualSchedule.reduce((sum, p) => sum + p.interest, 0);
-        const interestSaved = originalTotalInterest - projectedTotalInterest;
-
-        const totalPartPayments = Object.values(transactions).reduce((sum, t) => sum + (t.partPayment || 0), 0);
-        if (totalPartPayments <= 0 || (timeSavedMonths <= 0 && interestSaved <= 0)) {
-            return null;
-        }
-
-        return {
-            timeSavedMonths,
-            interestSaved,
-        };
+    const summaryData = useMemo(() => {
+        return calculateComprehensiveSummary(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : null, transactions);
     }, [principal, interest, tenure, isInitialized, emiStartDate, transactions]);
+
+    const impact = useMemo(() => {
+        if (!summaryData) return null;
+        if (summaryData.totalPartPayments <= 0 || (summaryData.timeSavedMonths <= 0 && summaryData.interestSaved <= 0)) {
+            return null;
+        }
+        return {
+            timeSavedMonths: summaryData.timeSavedMonths,
+            interestSaved: summaryData.interestSaved,
+        };
+    }, [summaryData]);
 
     if (!impact) return null;
 
