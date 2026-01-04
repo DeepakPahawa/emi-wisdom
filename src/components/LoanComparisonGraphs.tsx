@@ -176,9 +176,9 @@ export function LoanComparisonGraphs() {
     );
 
     return (
-        <div className="grid grid-cols-1 gap-4">
-            {renderChart("Part Payment Impact", actualData, crossoverPointActual)}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {renderChart("Original Schedule", originalData, crossoverPointOriginal)}
+            {renderChart("Part Payment Impact", actualData, crossoverPointActual)}
         </div>
     );
 }
