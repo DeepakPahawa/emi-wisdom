@@ -355,7 +355,7 @@ export function AmortizationSchedule() {
                                                             // Show amount
                                                             <>
                                                                 {transaction.partPayment ? (
-                                                                    <span className="font-medium text-foreground">
+                                                                    <span className="font-medium text-part-payment">
                                                                         {formatCurrency(transaction.partPayment)}
                                                                     </span>
                                                                 ) : (
@@ -371,12 +371,12 @@ export function AmortizationSchedule() {
                                         {/* Principal */}
                                         <TableCell className="text-right py-2">
                                             <div className="space-y-0.5">
-                                                <div className="font-medium text-primary text-sm">
+                                                <div className="font-medium text-principal text-sm">
                                                     {formatCurrency(payment.principal)}
                                                 </div>
                                                 <div className="h-1 bg-muted rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-primary transition-all duration-500"
+                                                        className="h-full bg-principal transition-all duration-500"
                                                         style={{ width: `${principalPercentage}%` }}
                                                     ></div>
                                                 </div>
@@ -389,12 +389,12 @@ export function AmortizationSchedule() {
                                         {/* Interest */}
                                         <TableCell className="text-right py-2">
                                             <div className="space-y-0.5">
-                                                <div className="font-medium text-primary/60 text-sm">
+                                                <div className="font-medium text-interest text-sm">
                                                     {formatCurrency(payment.interest)}
                                                 </div>
                                                 <div className="h-1 bg-muted rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-primary/40 transition-all duration-500"
+                                                        className="h-full bg-interest transition-all duration-500"
                                                         style={{ width: `${interestPercentage}%` }}
                                                     ></div>
                                                 </div>

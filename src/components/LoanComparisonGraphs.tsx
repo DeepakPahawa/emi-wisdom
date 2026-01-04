@@ -16,6 +16,10 @@ import {
     ReferenceLine,
 } from "recharts";
 
+// Theme colors matching globals.css
+const PRINCIPAL_COLOR = "#3b82f6";
+const INTEREST_COLOR = "#f97316";
+
 export function LoanComparisonGraphs() {
     const { principal, interest, tenure, isInitialized, emiStartDate, transactions } = useLoanConfigStore();
 
@@ -72,14 +76,14 @@ export function LoanComparisonGraphs() {
                 <div className="bg-background/95 backdrop-blur-sm border border-border p-3 rounded-lg shadow-xl text-xs space-y-2">
                     <p className="font-bold text-sm">Month {label}</p>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PRINCIPAL_COLOR }}></div>
                         <span className="text-muted-foreground">Principal:</span>
                         <span className="font-bold text-foreground">
                             {formatCurrency(payload[0].value)}
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full opacity-60 bg-primary"></div>
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: INTEREST_COLOR }}></div>
                         <span className="text-muted-foreground">Interest:</span>
                         <span className="font-bold text-foreground">
                             {formatCurrency(payload[1].value)}
@@ -106,13 +110,13 @@ export function LoanComparisonGraphs() {
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
-                                <linearGradient id={`colorPrincipal-${title}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
-                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                <linearGradient id={`colorPrincipal-${title.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={PRINCIPAL_COLOR} stopOpacity={0.4} />
+                                    <stop offset="95%" stopColor={PRINCIPAL_COLOR} stopOpacity={0} />
                                 </linearGradient>
-                                <linearGradient id={`colorInterest-${title}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                <linearGradient id={`colorInterest-${title.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={INTEREST_COLOR} stopOpacity={0.4} />
+                                    <stop offset="95%" stopColor={INTEREST_COLOR} stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
@@ -134,12 +138,12 @@ export function LoanComparisonGraphs() {
                             {crossover && (
                                 <ReferenceLine
                                     x={crossover}
-                                    stroke="var(--primary)"
+                                    stroke={PRINCIPAL_COLOR}
                                     strokeDasharray="5 5"
                                     label={{
                                         value: `PA > INT @ ${crossover}`,
                                         position: 'top',
-                                        fill: 'var(--primary)',
+                                        fill: PRINCIPAL_COLOR,
                                         fontSize: 10,
                                         fontWeight: '600'
                                     }}
@@ -149,20 +153,19 @@ export function LoanComparisonGraphs() {
                             <Area
                                 type="monotone"
                                 dataKey="principal"
-                                stroke="var(--primary)"
+                                stroke={PRINCIPAL_COLOR}
                                 name="Principal"
                                 fillOpacity={1}
-                                fill={`url(#colorPrincipal-${title})`}
+                                fill={`url(#colorPrincipal-${title.replace(/\s+/g, '-')})`}
                                 strokeWidth={2}
                             />
                             <Area
                                 type="monotone"
                                 dataKey="interest"
-                                stroke="var(--primary)"
-                                strokeOpacity={0.3}
+                                stroke={INTEREST_COLOR}
                                 name="Interest"
                                 fillOpacity={1}
-                                fill={`url(#colorInterest-${title})`}
+                                fill={`url(#colorInterest-${title.replace(/\s+/g, '-')})`}
                                 strokeWidth={2}
                             />
                         </AreaChart>

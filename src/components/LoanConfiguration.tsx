@@ -136,11 +136,11 @@ export function LoanConfiguration() {
                             onValueChange={(vals) => setPrincipal(vals[0])}
                             max={100000000}
                             step={50000}
-                            className="py-2"
+                            className="py-2 [&_[data-slot=slider-range]]:bg-principal [&_[data-slot=slider-thumb]]:border-principal"
                             showTooltip
                             formatTooltip={formatCompactCurrency}
                         />
-                        <p className="text-xs font-medium text-muted-foreground text-right">
+                        <p className="text-xs font-medium text-principal text-right">
                             {formatCurrency(principal)}
                         </p>
                     </div>
@@ -172,11 +172,11 @@ export function LoanConfiguration() {
                             onValueChange={(vals) => setInterest(vals[0])}
                             max={30}
                             step={0.05}
-                            className="py-2"
+                            className="py-2 [&_[data-slot=slider-range]]:bg-interest [&_[data-slot=slider-thumb]]:border-interest"
                             showTooltip
                             formatTooltip={(v) => `${v}%`}
                         />
-                        <p className="text-xs font-medium text-muted-foreground text-right">{interest}% p.a.</p>
+                        <p className="text-xs font-medium text-interest text-right">{interest}% p.a.</p>
                     </div>
 
                     {/* Loan Tenure */}

@@ -165,7 +165,7 @@ export function LoanSummary() {
                                 </p>
                                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-primary transition-all duration-500"
+                                        className="h-full bg-principal transition-all duration-500"
                                         style={{ width: `${principalPercentage}%` }}
                                     />
                                 </div>
@@ -173,12 +173,12 @@ export function LoanSummary() {
 
                             <div className="space-y-2">
                                 <span className="text-xs text-muted-foreground">Interest Paid</span>
-                                <p className="text-lg font-semibold tracking-tight text-muted-foreground">
+                                <p className="text-lg font-semibold tracking-tight text-interest">
                                     {formatCurrency(totalInterestPaid)}
                                 </p>
                                 <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-primary/40 transition-all duration-500"
+                                        className="h-full bg-interest transition-all duration-500"
                                         style={{ width: `${interestPercentage}%` }}
                                     />
                                 </div>
@@ -189,15 +189,15 @@ export function LoanSummary() {
                     {/* Part Payments Impact */}
                     <AnimatePresence mode="wait">
                         {totalPartPayments > 0 && (
-                            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-4">
-                                <div className="flex items-center gap-2 text-primary">
+                            <div className="p-4 rounded-lg bg-part-payment/5 border border-part-payment/20 space-y-4">
+                                <div className="flex items-center gap-2 text-part-payment">
                                     <Zap className="w-4 h-4" />
                                     <h3 className="text-sm font-bold uppercase tracking-wider">Benefits</h3>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     {[
                                         { label: "Total Extra", value: formatCurrency(totalPartPayments) },
-                                        { label: "Time Saved", value: `${timeSavedMonths}m` },
+                                        { label: "Time Saved", value: `${timeSavedMonths} ${timeSavedMonths === 1 ? 'month' : 'months'}` },
                                         { label: "Interest Saved", value: formatCurrency(Math.max(0, interestSaved)) },
                                         { label: "New End Date", value: formatDate(projectedPayoffDate) },
                                     ].map((item) => (
@@ -205,7 +205,7 @@ export function LoanSummary() {
                                             <p className="text-[10px] text-muted-foreground uppercase font-semibold">
                                                 {item.label}
                                             </p>
-                                            <p className="text-sm font-bold">
+                                            <p className="text-sm font-bold text-part-payment">
                                                 {item.value}
                                             </p>
                                         </div>
@@ -227,7 +227,7 @@ export function LoanSummary() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-[10px] text-muted-foreground uppercase font-medium">Months Left</p>
-                            <p className="font-semibold">{estimatedRemainingMonths}</p>
+                            <p className="font-semibold">{estimatedRemainingMonths} {estimatedRemainingMonths === 1 ? 'month' : 'months'}</p>
                         </div>
                         <div className="space-y-1">
                             <p className="text-[10px] text-muted-foreground uppercase font-medium">Monthly EMI</p>

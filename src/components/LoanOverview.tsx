@@ -59,7 +59,7 @@ export function LoanOverview() {
                     {/* Total Interest Paid */}
                     <div className="space-y-1">
                         <p className="text-[10px] text-muted-foreground uppercase font-medium">Total Interest</p>
-                        <p className="text-xl font-bold tracking-tight text-muted-foreground">
+                        <p className="text-xl font-bold tracking-tight text-interest">
                             {formatCurrency(summary.totalInterest)}
                         </p>
                     </div>
@@ -88,21 +88,21 @@ export function LoanOverview() {
                     </div>
                     <div className="h-4 rounded-full overflow-hidden bg-secondary flex">
                         <div
-                            className="bg-primary transition-all duration-500"
+                            className="bg-principal transition-all duration-500"
                             style={{ width: `${principalPercentage}%` }}
                         />
                         <div
-                            className="bg-primary/30 transition-all duration-500"
+                            className="bg-interest transition-all duration-500"
                             style={{ width: `${interestPercentage}%` }}
                         />
                     </div>
                     <div className="flex gap-4 text-[10px] font-medium">
                         <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-sm bg-primary"></div>
+                            <div className="w-2.5 h-2.5 rounded-sm bg-principal"></div>
                             <span>Principal ({principalPercentage.toFixed(1)}%)</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-2.5 h-2.5 rounded-sm bg-primary/30"></div>
+                            <div className="w-2.5 h-2.5 rounded-sm bg-interest"></div>
                             <span>Interest ({interestPercentage.toFixed(1)}%)</span>
                         </div>
                     </div>
