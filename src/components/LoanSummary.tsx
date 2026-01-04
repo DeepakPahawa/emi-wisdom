@@ -5,6 +5,7 @@ import { useLoanConfigStore } from "@/store/loan-config-store";
 import { generateAmortizationSchedule, formatCurrency, formatDate } from "@/lib/loan-calculations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Calendar, DollarSign, PiggyBank, Zap, CheckCircle2, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function LoanSummary() {
     const { principal, interest, tenure, isInitialized, emiStartDate, transactions } = useLoanConfigStore();
@@ -120,188 +121,249 @@ export function LoanSummary() {
     const interestPercentage = totalAmountPaid > 0 ? (totalInterestPaid / totalAmountPaid) * 100 : 0;
 
     return (
-        <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0">
-            <CardHeader className="bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-cyan-500/10 border-b py-4">
-                <CardTitle className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
-                    Loan Summary
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                    Track your progress and savings
-                </p>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <Card className="w-full shadow-lg hover:shadow-xl transition-shadow duration-300 py-0 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-cyan-500/10 border-b py-4">
+                    <CardTitle className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
+                        Loan Summary
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Track your progress and savings
+                    </p>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
 
-                {/* EMI Payment Progress */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                            <h3 className="font-semibold text-sm">EMI Payment Progress</h3>
-                        </div>
-                        <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                            {totalEmisPaid} / {tenure} EMIs
-                        </span>
-                    </div>
-                    <div className="relative">
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-700 ease-out relative"
-                                style={{ width: `${emiPaymentProgress}%` }}
-                            >
-                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    {/* EMI Payment Progress */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                <h3 className="font-semibold text-sm">EMI Payment Progress</h3>
                             </div>
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                                {totalEmisPaid} / {tenure} EMIs
+                            </span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1.5 text-right">
-                            {emiPaymentProgress.toFixed(1)}% Complete
-                        </p>
-                    </div>
-                </div>
-
-                {/* Principal vs Interest Breakdown */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                        <PiggyBank className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <h3 className="font-semibold text-sm">Payment Breakdown</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Principal Paid</span>
-                                <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                                {formatCurrency(totalPrincipalPaid)}
-                            </p>
-                            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="relative">
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
-                                    style={{ width: `${principalPercentage}%` }}
-                                ></div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {principalPercentage.toFixed(1)}% of total paid
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs text-muted-foreground">Interest Paid</span>
-                                <TrendingDown className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                            </div>
-                            <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
-                                {formatCurrency(totalInterestPaid)}
-                            </p>
-                            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
-                                    style={{ width: `${interestPercentage}%` }}
-                                ></div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {interestPercentage.toFixed(1)}% of total paid
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Part Payments Impact */}
-                {totalPartPayments > 0 && (
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                        <div className="flex items-start gap-3">
-                            <Zap className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
-                            <div className="flex-1 space-y-2">
-                                <h3 className="font-semibold text-sm text-green-900 dark:text-green-100">
-                                    Part Payment Benefits
-                                </h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <p className="text-xs text-green-700 dark:text-green-300">Total Part Payments</p>
-                                        <p className="text-base font-bold text-green-900 dark:text-green-100">
-                                            {formatCurrency(totalPartPayments)}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-green-700 dark:text-green-300">Time Saved</p>
-                                        <p className="text-base font-bold text-green-900 dark:text-green-100">
-                                            {timeSavedMonths} {timeSavedMonths === 1 ? 'month' : 'months'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-green-700 dark:text-green-300">Interest Saved</p>
-                                        <p className="text-base font-bold text-green-900 dark:text-green-100">
-                                            {formatCurrency(Math.max(0, interestSaved))}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-green-700 dark:text-green-300">New Payoff Date</p>
-                                        <p className="text-xs font-semibold text-green-900 dark:text-green-100">
-                                            {formatDate(projectedPayoffDate)}
-                                        </p>
-                                    </div>
+                                    className="h-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-700 ease-out relative"
+                                    style={{ width: `${emiPaymentProgress}%` }}
+                                >
+                                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
                                 </div>
                             </div>
+                            <p className="text-xs text-muted-foreground mt-1.5 text-right">
+                                {emiPaymentProgress.toFixed(1)}% Complete
+                            </p>
                         </div>
                     </div>
-                )}
 
-                {/* Key Metrics Grid */}
-                <div className="pt-4 border-t grid grid-cols-2 gap-x-4 gap-y-6 text-center">
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total Paid</p>
-                        <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(totalAmountPaid)}
-                        </p>
-                    </div>
+                    {/* Principal vs Interest Breakdown */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <PiggyBank className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <h3 className="font-semibold text-sm">Payment Breakdown</h3>
+                        </div>
 
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Remaining</p>
-                        <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(remainingBalance)}
-                        </p>
-                    </div>
-
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Months Left</p>
-                        <p className="text-sm font-semibold text-foreground">
-                            {estimatedRemainingMonths}
-                        </p>
-                    </div>
-
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Monthly EMI</p>
-                        <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(originalEmi)}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Original vs Projected Comparison */}
-                {totalPartPayments > 0 && (
-                    <div className="pt-2 border-t">
-                        <div className="grid grid-cols-2 gap-4 text-center">
-                            <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Original Payoff</p>
-                                <p className="text-sm font-semibold text-foreground">
-                                    {formatDate(originalPayoffDate)}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-muted-foreground">Principal Paid</span>
+                                    <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <p className="text-lg font-bold text-blue-700 dark:text-blue-300">
+                                    {formatCurrency(totalPrincipalPaid)}
                                 </p>
+                                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                                        style={{ width: `${principalPercentage}%` }}
+                                    ></div>
+                                </div>
                                 <p className="text-xs text-muted-foreground">
-                                    ({tenure} months)
+                                    {principalPercentage.toFixed(1)}% of total paid
                                 </p>
                             </div>
-                            <div className="space-y-1 bg-green-50 dark:bg-green-950/20 rounded-lg p-2">
-                                <p className="text-xs text-green-700 dark:text-green-300">Projected Payoff</p>
-                                <p className="text-sm font-bold text-green-900 dark:text-green-100">
-                                    {formatDate(projectedPayoffDate)}
+
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs text-muted-foreground">Interest Paid</span>
+                                    <TrendingDown className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <p className="text-lg font-bold text-orange-700 dark:text-orange-300">
+                                    {formatCurrency(totalInterestPaid)}
                                 </p>
-                                <p className="text-xs text-green-700 dark:text-green-300">
-                                    ({actualMonthsPaid + estimatedRemainingMonths} months)
+                                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                                        style={{ width: `${interestPercentage}%` }}
+                                    ></div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {interestPercentage.toFixed(1)}% of total paid
                                 </p>
                             </div>
                         </div>
                     </div>
-                )}
-            </CardContent>
-        </Card>
+
+                    {/* Part Payments Impact */}
+                    <AnimatePresence mode="wait">
+                        {totalPartPayments > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800 overflow-hidden relative shadow-sm"
+                            >
+                                {/* Animated Background Shine */}
+                                <motion.div
+                                    animate={{
+                                        x: ['-100%', '200%'],
+                                    }}
+                                    transition={{
+                                        duration: 3,
+                                        repeat: Infinity,
+                                        ease: "linear",
+                                        repeatDelay: 2
+                                    }}
+                                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-white/5 to-transparent skew-x-12 pointer-events-none"
+                                />
+
+                                <div className="flex items-start gap-3 relative z-10">
+                                    <motion.div
+                                        animate={{
+                                            scale: [1, 1.2, 1],
+                                            rotate: [0, 5, -5, 0]
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                        }}
+                                    >
+                                        <Zap className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                                    </motion.div>
+                                    <div className="flex-1 space-y-3">
+                                        <motion.h3
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.2 }}
+                                            className="font-bold text-sm text-green-900 dark:text-green-100 flex items-center gap-1.5"
+                                        >
+                                            Part Payment Benefits
+                                            <span className="flex h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        </motion.h3>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                            {[
+                                                { label: "Total Part Payments", value: formatCurrency(totalPartPayments), icon: DollarSign },
+                                                { label: "Time Saved", value: `${timeSavedMonths} ${timeSavedMonths === 1 ? 'month' : 'months'}`, icon: Clock },
+                                                { label: "Interest Saved", value: formatCurrency(Math.max(0, interestSaved)), icon: PiggyBank },
+                                                { label: "New Payoff Date", value: formatDate(projectedPayoffDate), icon: Calendar },
+                                            ].map((item, index) => (
+                                                <motion.div
+                                                    key={item.label}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: 0.3 + (index * 0.1) }}
+                                                    className="space-y-0.5"
+                                                >
+                                                    <p className="text-[10px] uppercase tracking-wider font-semibold text-green-700/70 dark:text-green-300/70 flex items-center gap-1">
+                                                        {item.label}
+                                                    </p>
+                                                    <p className="text-sm font-bold text-green-900 dark:text-green-100 truncate">
+                                                        {item.value}
+                                                    </p>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Key Metrics Grid */}
+                    <div className="pt-4 border-t grid grid-cols-2 gap-x-4 gap-y-6 text-center">
+                        <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total Paid</p>
+                            <p className="text-sm font-semibold text-foreground">
+                                {formatCurrency(totalAmountPaid)}
+                            </p>
+                        </div>
+
+                        <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Remaining</p>
+                            <p className="text-sm font-semibold text-foreground">
+                                {formatCurrency(remainingBalance)}
+                            </p>
+                        </div>
+
+                        <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Months Left</p>
+                            <p className="text-sm font-semibold text-foreground">
+                                {estimatedRemainingMonths}
+                            </p>
+                        </div>
+
+                        <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Monthly EMI</p>
+                            <p className="text-sm font-semibold text-foreground">
+                                {formatCurrency(originalEmi)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Original vs Projected Comparison */}
+                    <AnimatePresence>
+                        {totalPartPayments > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                                className="pt-2 border-t overflow-hidden"
+                            >
+                                <div className="grid grid-cols-2 gap-4 text-center">
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Original Payoff</p>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            {formatDate(originalPayoffDate)}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            ({tenure} months)
+                                        </p>
+                                    </div>
+                                    <motion.div
+                                        initial={{ scale: 0.95 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{
+                                            duration: 0.4,
+                                            repeat: Infinity,
+                                            repeatType: "reverse",
+                                            repeatDelay: 2
+                                        }}
+                                        className="space-y-1 bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-100 dark:border-green-900/30"
+                                    >
+                                        <p className="text-xs text-green-700 dark:text-green-300 uppercase tracking-wider font-bold">Projected Payoff</p>
+                                        <p className="text-sm font-bold text-green-900 dark:text-green-100">
+                                            {formatDate(projectedPayoffDate)}
+                                        </p>
+                                        <p className="text-[10px] text-green-700 dark:text-green-300 font-medium">
+                                            ({actualMonthsPaid + estimatedRemainingMonths} months)
+                                        </p>
+                                    </motion.div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </CardContent>
+            </Card>
+        </motion.div>
     );
 }
