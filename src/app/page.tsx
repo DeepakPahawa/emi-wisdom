@@ -2,6 +2,7 @@
 "use client"
 
 import { LoanConfiguration } from "@/components/LoanConfiguration"
+import { LoanSummary } from "@/components/LoanSummary"
 import { LoanOverview } from "@/components/LoanOverview"
 import { AmortizationSchedule } from "@/components/AmortizationSchedule"
 import { useLoanConfigStore } from "@/store/loan-config-store"
@@ -62,6 +63,7 @@ export default function Home() {
           {/* Left Column: Loan Configuration (4 cols) */}
           <div className="lg:col-span-4 space-y-6" id="left-column-container">
             <LoanConfiguration />
+            <LoanSummary />
           </div>
 
           {/* Right Column: Loan Overview and EMI Schedule (8 cols) */}

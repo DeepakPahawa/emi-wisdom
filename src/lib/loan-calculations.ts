@@ -47,23 +47,67 @@ export function generateAmortizationSchedule(
     principal: number,
     annualRate: number,
     months: number,
-    startDate: Date = new Date()
+    startDate: Date = new Date(),
+    transactions: Record<number, { paidEmi: number; partPayment: number }> = {}
 ): MonthlyPayment[] {
     const schedule: MonthlyPayment[] = [];
-    const emi = calculateEMI(principal, annualRate, months);
+    const originalEmi = calculateEMI(principal, annualRate, months);
     const monthlyRate = annualRate / 12 / 100;
 
     let balance = principal;
 
+    // We still show all 'months' rows, but the balance might hit zero earlier
     for (let month = 1; month <= months; month++) {
+        const transaction = transactions[month] || { paidEmi: 0, partPayment: 0 };
+
+        // If balance is already 0, we just push empty rows or stop based on preference
+        // Usually it's better to show the full tenure but with 0 values if paid off early
+        if (balance <= 0) {
+            schedule.push({
+                month,
+                emi: 0,
+                principal: 0,
+                interest: 0,
+                balance: 0,
+            });
+            continue;
+        }
+
         const interestPayment = balance * monthlyRate;
-        const principalPayment = emi - interestPayment;
-        balance = Math.max(0, balance - principalPayment);
+
+        // Use paid EMI if provided, otherwise use original EMI
+        // ONLY use paidEmi if it's explicitly set (greater than 0)
+        let actualEmiPaid = transaction.paidEmi > 0 ? transaction.paidEmi : originalEmi;
+        const partPayment = transaction.partPayment || 0;
+
+        let principalPaidFromEmi = actualEmiPaid - interestPayment;
+
+        // Ensure interest is always covered first. If EMI < interest, 
+        // interest is paid only up to EMI amount, and principal paid is 0.
+        if (principalPaidFromEmi < 0) {
+            principalPaidFromEmi = 0;
+            // Note: In real life, negative principal would increase balance (unpaid interest added to principal)
+            // But for simple calculators we usually assume interest is fully paid or we just cap it.
+        }
+
+        // Total principal reduction this month
+        let totalPrincipalReduction = principalPaidFromEmi + partPayment;
+
+        // Don't pay more than the remaining balance
+        if (totalPrincipalReduction > balance) {
+            totalPrincipalReduction = balance;
+            // Adjust emi display if payoff happened with a smaller amount
+            if (partPayment > balance) {
+                // Should not happen usually as part payment is extra
+            }
+        }
+
+        balance = Math.max(0, balance - totalPrincipalReduction);
 
         schedule.push({
             month,
-            emi: Math.round(emi * 100) / 100,
-            principal: Math.round(principalPayment * 100) / 100,
+            emi: Math.round(actualEmiPaid * 100) / 100,
+            principal: Math.round(totalPrincipalReduction * 100) / 100,
             interest: Math.round(interestPayment * 100) / 100,
             balance: Math.round(balance * 100) / 100,
         });

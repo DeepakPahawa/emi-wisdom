@@ -12,7 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Copy, ArrowLeftRight, Pencil, Trash2 } from "lucide-react";
+import { Copy, ArrowLeftRight, Pencil, Trash2, ArrowDownUp, ArrowDownToLine } from "lucide-react";
 
 export function AmortizationSchedule() {
     const { principal, interest, tenure, isInitialized, emiStartDate, transactions, updateTransaction, updateBulkTransactions } = useLoanConfigStore();
@@ -23,8 +23,8 @@ export function AmortizationSchedule() {
         if (!isInitialized || principal <= 0 || interest <= 0 || tenure <= 0) {
             return [];
         }
-        return generateAmortizationSchedule(principal, interest, tenure);
-    }, [principal, interest, tenure, isInitialized]);
+        return generateAmortizationSchedule(principal, interest, tenure, emiStartDate ? new Date(emiStartDate) : new Date(), transactions);
+    }, [principal, interest, tenure, isInitialized, emiStartDate, transactions]);
 
     if (schedule.length === 0) {
         return (
@@ -70,9 +70,16 @@ export function AmortizationSchedule() {
                             {schedule.map((payment, index) => {
                                 const isEvenRow = index % 2 === 0;
                                 const isLastPayment = index === schedule.length - 1;
-                                const principalPercentage = (payment.principal / payment.emi) * 100;
-                                const interestPercentage = (payment.interest / payment.emi) * 100;
                                 const transaction = transactions[payment.month] || { paidEmi: 0, partPayment: 0 };
+
+                                // The principal and emi in 'payment' now already include transaction adjustments
+                                const totalPayment = payment.emi + (transaction.partPayment > 0 ? 0 : 0); // This is just for context
+
+                                // Calculate percentages based on the actual components returned by the generator
+                                const totalContributedThisMonth = payment.principal + payment.interest;
+                                const principalPercentage = totalContributedThisMonth > 0 ? (payment.principal / totalContributedThisMonth) * 100 : 0;
+                                const interestPercentage = totalContributedThisMonth > 0 ? (payment.interest / totalContributedThisMonth) * 100 : 0;
+
                                 const startDate = emiStartDate ? new Date(emiStartDate) : new Date();
 
                                 const handleCopyEmi = () => {
@@ -93,9 +100,51 @@ export function AmortizationSchedule() {
                                     updateBulkTransactions(updates);
                                 };
 
-                                const handleCopyPartPayment = () => {
-                                    const halfEmi = Math.ceil(payment.emi / 2);
-                                    updateTransaction(payment.month, transaction.paidEmi, halfEmi);
+
+                                const handleSyncPartPayment = () => {
+                                    // Find the most recent filled part payment cell before this one
+                                    let valueToSync = payment.emi; // Default to EMI amount
+
+                                    for (let month = payment.month - 1; month >= 1; month--) {
+                                        const prevTransaction = transactions[month];
+                                        if (prevTransaction && prevTransaction.partPayment > 0) {
+                                            valueToSync = prevTransaction.partPayment;
+                                            break;
+                                        }
+                                    }
+
+                                    updateTransaction(payment.month, transaction.paidEmi, valueToSync);
+                                };
+
+                                const handleBulkSyncPartPayment = () => {
+                                    // Find the most recent filled part payment cell before this one
+                                    let valueToSync = 0;
+                                    let lastFilledMonth = 0;
+
+                                    for (let month = payment.month - 1; month >= 1; month--) {
+                                        const prevTransaction = transactions[month];
+                                        if (prevTransaction && prevTransaction.partPayment > 0) {
+                                            valueToSync = prevTransaction.partPayment;
+                                            lastFilledMonth = month;
+                                            break;
+                                        }
+                                    }
+
+                                    if (valueToSync > 0) {
+                                        const updates = [];
+                                        for (let month = lastFilledMonth + 1; month <= payment.month; month++) {
+                                            const existingTransaction = transactions[month] || { paidEmi: 0, partPayment: 0 };
+                                            updates.push({
+                                                month,
+                                                paidEmi: existingTransaction.paidEmi,
+                                                partPayment: valueToSync
+                                            });
+                                        }
+                                        updateBulkTransactions(updates);
+                                    } else {
+                                        // If no previous value, just do a normal sync (uses EMI)
+                                        handleSyncPartPayment();
+                                    }
                                 };
 
                                 const handlePaidEmiChange = (value: string) => {
@@ -121,6 +170,12 @@ export function AmortizationSchedule() {
                                     }
                                     updateBulkTransactions(updates);
                                 };
+
+                                const handleDeletePartPayment = () => {
+                                    // Clear only the current cell
+                                    updateTransaction(payment.month, transaction.paidEmi, 0);
+                                };
+
 
 
                                 return (
@@ -152,11 +207,7 @@ export function AmortizationSchedule() {
 
                                         {/* Paid EMI */}
                                         <TableCell className="text-right py-2">
-                                            <div
-                                                className="relative inline-block w-full"
-                                                onMouseEnter={() => setHoveredCell({ month: payment.month, type: 'paid' })}
-                                                onMouseLeave={() => setHoveredCell(null)}
-                                            >
+                                            <div className="relative inline-block w-full">
                                                 {editingCell?.month === payment.month && editingCell?.type === 'paid' ? (
                                                     <input
                                                         type="number"
@@ -174,46 +225,55 @@ export function AmortizationSchedule() {
                                                         autoFocus
                                                     />
                                                 ) : (
-                                                    <div className="px-2 py-1 text-sm text-right">
-                                                        {transaction.paidEmi ? (
-                                                            <span className="font-medium text-foreground">
-                                                                {formatCurrency(transaction.paidEmi)}
-                                                            </span>
+                                                    <div
+                                                        className="px-2 py-1 text-sm text-right"
+                                                        onMouseEnter={() => setHoveredCell({ month: payment.month, type: 'paid' })}
+                                                        onMouseLeave={() => setHoveredCell(null)}
+                                                    >
+                                                        {hoveredCell?.month === payment.month && hoveredCell?.type === 'paid' ? (
+                                                            // Show icons, hide amount
+                                                            <div className="flex justify-end gap-1">
+                                                                {transaction.paidEmi ? (
+                                                                    // Show delete icon when there's a value
+                                                                    <button
+                                                                        onClick={handleDeletePaidEmi}
+                                                                        className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                        title="Delete this and all subsequent EMI payments"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                ) : (
+                                                                    // Show sync icon when there's no value
+                                                                    <button
+                                                                        onClick={handleCopyEmi}
+                                                                        className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                        title="Sync EMI amount to all previous empty cells"
+                                                                    >
+                                                                        <ArrowLeftRight className="w-4 h-4" />
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingCell({ month: payment.month, type: 'paid' });
+                                                                    }}
+                                                                    className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                    title="Edit amount"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         ) : (
-                                                            <span className="text-muted-foreground">-</span>
+                                                            // Show amount
+                                                            <>
+                                                                {transaction.paidEmi ? (
+                                                                    <span className="font-medium text-foreground">
+                                                                        {formatCurrency(transaction.paidEmi)}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-muted-foreground">-</span>
+                                                                )}
+                                                            </>
                                                         )}
-                                                    </div>
-                                                )}
-                                                {hoveredCell?.month === payment.month && hoveredCell?.type === 'paid' && (
-                                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 animate-in fade-in slide-in-from-right-2 duration-200">
-                                                        {transaction.paidEmi ? (
-                                                            // Show delete icon when there's a value
-                                                            <button
-                                                                onClick={handleDeletePaidEmi}
-                                                                className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-all duration-200 hover:scale-110"
-                                                                title="Delete this and all subsequent EMI payments"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        ) : (
-                                                            // Show sync icon when there's no value
-                                                            <button
-                                                                onClick={handleCopyEmi}
-                                                                className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-all duration-200 hover:scale-110"
-                                                                title="Sync EMI amount to all previous empty cells"
-                                                            >
-                                                                <ArrowLeftRight className="w-4 h-4" />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingCell({ month: payment.month, type: 'paid' });
-                                                            }}
-                                                            className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-all duration-200 hover:scale-110"
-                                                            title="Edit amount"
-                                                        >
-                                                            <Pencil className="w-4 h-4" />
-                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
@@ -221,26 +281,92 @@ export function AmortizationSchedule() {
 
                                         {/* Part Payment */}
                                         <TableCell className="text-right py-2">
-                                            <div
-                                                className="relative inline-block w-full"
-                                                onMouseEnter={() => setHoveredCell({ month: payment.month, type: 'part' })}
-                                                onMouseLeave={() => setHoveredCell(null)}
-                                            >
-                                                <input
-                                                    type="number"
-                                                    value={transaction.partPayment || ''}
-                                                    onChange={(e) => handlePartPaymentChange(e.target.value)}
-                                                    placeholder="0"
-                                                    className="w-full px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                />
-                                                {hoveredCell?.month === payment.month && hoveredCell?.type === 'part' && (
-                                                    <button
-                                                        onClick={handleCopyPartPayment}
-                                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors duration-200"
-                                                        title="Copy EMI amount"
+                                            <div className="relative inline-block w-full">
+                                                {editingCell?.month === payment.month && editingCell?.type === 'part' ? (
+                                                    <input
+                                                        type="number"
+                                                        value={transaction.partPayment || ''}
+                                                        onChange={(e) => handlePartPaymentChange(e.target.value)}
+                                                        placeholder="-"
+                                                        className="w-full px-2 py-1 text-sm text-right border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.currentTarget.blur();
+                                                                setEditingCell(null);
+                                                            }
+                                                        }}
+                                                        onBlur={() => setEditingCell(null)}
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    <div
+                                                        className="px-2 py-1 text-sm text-right"
+                                                        onMouseEnter={() => setHoveredCell({ month: payment.month, type: 'part' })}
+                                                        onMouseLeave={() => setHoveredCell(null)}
                                                     >
-                                                        <Copy className="w-3 h-3" />
-                                                    </button>
+                                                        {hoveredCell?.month === payment.month && hoveredCell?.type === 'part' ? (
+                                                            // Show icons, hide amount
+                                                            <div className="flex justify-end gap-1">
+                                                                {transaction.partPayment ? (
+                                                                    // Show delete and bulk sync icons when there's a value
+                                                                    <>
+                                                                        <button
+                                                                            onClick={handleBulkSyncPartPayment}
+                                                                            className="p-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            title="Overwrite this and fill all empty cells before it with previous part payment value"
+                                                                        >
+                                                                            <ArrowDownToLine className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={handleDeletePartPayment}
+                                                                            className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            title="Delete this part payment"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    // Show sync icons when there's no value
+                                                                    <>
+                                                                        <button
+                                                                            onClick={handleBulkSyncPartPayment}
+                                                                            className="p-1 bg-indigo-500 hover:bg-indigo-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            title="Fill all empty cells up to this month with previous part payment value"
+                                                                        >
+                                                                            <ArrowDownToLine className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={handleSyncPartPayment}
+                                                                            className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                            title="Sync from previous part payment or EMI amount"
+                                                                        >
+                                                                            <ArrowDownUp className="w-4 h-4" />
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingCell({ month: payment.month, type: 'part' });
+                                                                    }}
+                                                                    className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-all duration-200 hover:scale-110"
+                                                                    title="Edit amount"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            // Show amount
+                                                            <>
+                                                                {transaction.partPayment ? (
+                                                                    <span className="font-medium text-foreground">
+                                                                        {formatCurrency(transaction.partPayment)}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="text-muted-foreground">-</span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </TableCell>
