@@ -311,13 +311,6 @@ export function AmortizationSchedule() {
                                                             {transaction.partPayment ? (
                                                                 <>
                                                                     <button
-                                                                        onClick={(e) => { e.stopPropagation(); handleBulkSyncPartPayment(); }}
-                                                                        className="p-1 bg-purple-500 hover:bg-purple-600 text-white rounded transition-all duration-150 hover:scale-105"
-                                                                        title="Copy Previous Part Payment or EMI amount to all the cells"
-                                                                    >
-                                                                        <ArrowDownToLine className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                    <button
                                                                         onClick={(e) => { e.stopPropagation(); handleDeletePartPayment(); }}
                                                                         className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-all duration-150 hover:scale-105"
                                                                         title="Delete"
