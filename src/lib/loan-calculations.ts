@@ -176,3 +176,23 @@ export function formatMonthYear(startDate: Date, monthNumber: number): string {
     return `${monthName}'${year}`;
 }
 
+/**
+ * Format currency in a compact Indian format (Lakhs, Crores)
+ */
+export function formatCompactCurrency(amount: number): string {
+    const isNegative = amount < 0;
+    const absAmount = Math.abs(amount);
+
+    let formatted = "";
+    if (absAmount >= 10000000) {
+        formatted = (absAmount / 10000000).toFixed(2) + "Cr";
+    } else if (absAmount >= 100000) {
+        formatted = (absAmount / 100000).toFixed(2) + "L";
+    } else if (absAmount >= 1000) {
+        formatted = (absAmount / 1000).toFixed(1) + "K";
+    } else {
+        formatted = absAmount.toString();
+    }
+
+    return (isNegative ? "-" : "") + "₹" + formatted;
+}
